@@ -1,0 +1,82 @@
+# src/courses/course_service.py
+
+from datetime import datetime, timezone
+from typing import List, Optional
+from sqlalchemy.future import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from src.models.models import Course, Module, Lesson, UserCourse, User
+from src.modules.notifications.notification_service import create_notification
+
+# Retrieve all courses
+async def get_all_courses(db: AsyncSession) -> List[Course]:
+    result = await db.execute(select(Course))
+    courses = result.scalars().all()
+    return courses
+
+# Retrieve a single course by ID
+async def get_course_by_id(course_id: str, db: AsyncSession) -> Optional[Course]:
+    result = await db.execute(select(Course).where(Course.id == course_id))
+    course = result.scalars().first()
+    return course
+
+# Retrieve course content: modules and their lessons
+async def get_course_content(course_id: str, db: AsyncSession) -> Optional[Course]:
+    # First, retrieve the course
+    result = await db.execute(select(Course).where(Course.id == course_id))
+    course = result.scalars().first()
+    if not course:
+        return None
+
+    # Eagerly load modules and lessons (assuming relationships are set up)
+    # If lazy-loading is configured appropriately, accessing course.modules and lesson collections is enough.
+    # Otherwise, you might consider using joined loading (not shown here for brevity).
+    # For each module, the lessons should already be available via the relationship (e.g. module.lessons).
+    return course
+
+# Enroll the current user in a course
+async def enroll_in_course(course_id: str, current_user: User, db: AsyncSession) -> bool:
+    # Check if the user is already enrolled
+    result = await db.execute(
+        select(UserCourse).where(
+            (UserCourse.user_id == current_user.id) &
+            (UserCourse.course_id == course_id)
+        )
+    )
+    enrollment = result.scalars().first()
+    if enrollment:
+        # Already enrolled; no need to add again.
+        return False
+
+    # Create a new enrollment record
+    new_enrollment = UserCourse(
+        user_id=current_user.id,
+        course_id=course_id,
+        progress=0.0  # Starting progress
+    )
+    db.add(new_enrollment)
+    await db.commit()
+    return True
+
+async def check_and_mark_course_completion(user_id: str, course_id: str, db: AsyncSession) -> None:
+    """
+    Check if the user's enrollment in the specified course has reached 100% progress.
+    If so, mark the course as completed and send a notification.
+    """
+    result = await db.execute(
+        select(UserCourse).where(
+            UserCourse.user_id == user_id,
+            UserCourse.course_id == course_id
+        )
+    )
+    enrollment = result.scalars().first()
+    if enrollment and enrollment.progress >= 100 and enrollment.completed_at is None:
+        enrollment.completed_at = datetime.now(timezone.utc)
+        db.add(enrollment)
+        await db.commit()
+        # Send notification that the course is completed.
+        await create_notification(
+            user_id,
+            "Course Completed",
+            f"You have completed the course successfully!",
+            db
+        )
