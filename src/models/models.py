@@ -416,17 +416,17 @@ class UserSkill(Base):
         return (f"<UserSkill(id={self.id}, user_id={self.user_id}, skill_id={self.skill_id}, "
                 f"proficiency={self.proficiency}, last_updated={self.last_updated})>")
 
-class ContactForm(Base):
-    __tablename__ = "contact_forms"
+# class ContactForm(Base):
+#     __tablename__ = "contact_forms"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
-    name = Column(String(255), nullable=False)
-    email = Column(String(255), nullable=False)
-    message = Column(Text, nullable=False)
-    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+#     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+#     name = Column(String(255), nullable=False)
+#     email = Column(String(255), nullable=False)
+#     message = Column(Text, nullable=False)
+#     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
-    def __repr__(self):
-        return f"<ContactForm(id={self.id}, name={self.name}, email={self.email}, created_at={self.created_at})>"
+#     def __repr__(self):
+#         return f"<ContactForm(id={self.id}, name={self.name}, email={self.email}, created_at={self.created_at})>"
 
 class Deadline(Base):
     __tablename__ = "deadlines"
