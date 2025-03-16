@@ -1,6 +1,6 @@
 # src/courses/course_controller.py
 
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,8 +13,21 @@ router = APIRouter(prefix="/courses", tags=["courses"])
 
 # GET /courses - Retrieve all courses
 @router.get("", response_model=List[schemas.CourseResponse])
-async def get_courses(db: AsyncSession = Depends(get_db_session)):
-    courses = await course_service.get_all_courses(db)
+async def get_courses(
+    q: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 10,
+    db: AsyncSession = Depends(get_db_session)
+):
+    """
+    Retrieve courses with optional search filtering and pagination.
+    
+    Query Parameters:
+    - **q**: Optional search query to filter courses by title or description.
+    - **skip**: Number of records to skip for pagination.
+    - **limit**: Maximum number of records to return.
+    """
+    courses = await course_service.get_all_courses(db, q, skip, limit)
     return courses
 
 # GET /courses/{course_id} - Retrieve course details by ID

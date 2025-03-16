@@ -2,14 +2,37 @@
 
 from datetime import datetime, timezone
 from typing import List, Optional
+from sqlalchemy import or_
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.models.models import Course, Module, Lesson, UserCourse, User
 from src.modules.notifications.notification_service import create_notification
 
 # Retrieve all courses
-async def get_all_courses(db: AsyncSession) -> List[Course]:
-    result = await db.execute(select(Course))
+async def get_all_courses(db: AsyncSession, q: Optional[str] = None, skip: int = 0, limit: int = 10) -> List[Course]:
+    """
+    Retrieve courses from the database with optional search and pagination.
+    
+    Args:
+        db (AsyncSession): The database session.
+        q (Optional[str]): Optional search query to filter by title or description.
+        skip (int): Number of records to skip (for pagination).
+        limit (int): Maximum number of records to return.
+        
+    Returns:
+        List[Course]: A list of courses matching the criteria.
+    """
+    if q:
+        query = select(Course).where(
+            or_(
+                Course.title.ilike(f"%{q}%"),
+                Course.description.ilike(f"%{q}%")
+            )
+        ).offset(skip).limit(limit)
+    else:
+        query = select(Course).offset(skip).limit(limit)
+    
+    result = await db.execute(query)
     courses = result.scalars().all()
     return courses
 

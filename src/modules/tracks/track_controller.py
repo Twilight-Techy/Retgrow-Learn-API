@@ -1,6 +1,6 @@
 # src/tracks/track_controller.py
 
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,11 +13,21 @@ from src.common.database.database import get_db_session
 router = APIRouter(prefix="/tracks", tags=["tracks"])
 
 @router.get("", response_model=List[schemas.TrackResponse])
-async def get_tracks(db: AsyncSession = Depends(get_db_session)):
+async def get_tracks(
+    q: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 10,
+    db: AsyncSession = Depends(get_db_session)
+):
     """
-    Retrieve all tracks.
+    Retrieve all tracks with optional search filtering and pagination.
+    
+    Query Parameters:
+      - **q**: Optional search query to filter tracks by title or description.
+      - **skip**: Number of records to skip.
+      - **limit**: Maximum number of records to return.
     """
-    tracks = await track_service.get_all_tracks(db)
+    tracks = await track_service.get_all_tracks(db, q, skip, limit)
     return tracks
 
 @router.get("/{slug}", response_model=schemas.TrackResponse)

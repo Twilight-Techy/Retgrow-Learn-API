@@ -2,16 +2,41 @@
 
 from typing import List, Optional
 import uuid
+from sqlalchemy import or_
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.models import Module, Track, TrackCourse
 
-async def get_all_tracks(db: AsyncSession) -> List[Track]:
+async def get_all_tracks(
+    db: AsyncSession, 
+    q: Optional[str] = None, 
+    skip: int = 0, 
+    limit: int = 10
+) -> List[Track]:
     """
-    Retrieve all tracks from the database.
+    Retrieve all tracks from the database with optional search filtering and pagination.
+    
+    Args:
+        db (AsyncSession): The database session.
+        q (Optional[str]): Optional search query to filter tracks by title or description.
+        skip (int): Number of records to skip (for pagination).
+        limit (int): Maximum number of records to return.
+        
+    Returns:
+        List[Track]: A list of tracks matching the criteria.
     """
-    result = await db.execute(select(Track))
+    if q:
+        query = select(Track).where(
+            or_(
+                Track.title.ilike(f"%{q}%"),
+                Track.description.ilike(f"%{q}%")
+            )
+        ).offset(skip).limit(limit)
+    else:
+        query = select(Track).offset(skip).limit(limit)
+    
+    result = await db.execute(query)
     tracks = result.scalars().all()
     return tracks
 
