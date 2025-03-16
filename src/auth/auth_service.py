@@ -8,6 +8,7 @@ from passlib.context import CryptContext
 from jwt.exceptions import JWTDecodeError
 
 from src.common.config import settings
+from src.common.utils.email import send_email
 from src.models.models import User, UserLogin
 
 # Initialize the password context (bcrypt)
@@ -55,6 +56,27 @@ async def signup_user(user_data: dict, db: AsyncSession) -> str:
         return None
     access_token_expires = timedelta(minutes=settings.JWT_EXPIRATION_MINUTES)
     access_token = create_access_token(data={"sub": str(new_user.id)}, expires_delta=access_token_expires)
+
+    # Prepare welcome email content.
+    subject = "Welcome to Retgrow Learn!"
+    body = (
+        f"Hi {new_user.first_name},\n\n"
+        "Thank you for signing up for Retgrow Learn. We're excited to have you on board!\n\n"
+        "Best regards,\n"
+        "The Retgrow Learn Team"
+    )
+    html_body = f"""
+    <p>Hi {new_user.first_name},</p>
+    <p>Thank you for signing up for <strong>Retgrow Learn</strong>. We're excited to have you on board!</p>
+    <p>Best regards,<br/>The Retgrow Learn Team</p>
+    """
+
+    try:
+        await send_email(subject, body, [new_user.email], html_body=html_body)
+    except Exception as e:
+        # Log the error but do not block the sign-up process.
+        print(f"Warning: Failed to send welcome email to {new_user.email}. Error: {e}")
+
     return access_token
 
 async def record_login_event(user_id: str, db: AsyncSession):
@@ -104,9 +126,18 @@ async def process_forgot_password(email: str, db: AsyncSession) -> bool:
     if user:
         # Generate a reset token (this example sets a 30-minute expiration)
         reset_token = create_reset_token(email, expires_delta=timedelta(minutes=30))
-        # Here you would normally call your email service to send the reset email.
-        # For demonstration purposes, we simply print the reset token.
-        print(f"Password reset token for {email}: {reset_token}")
+
+        # Prepare the email content
+        reset_link = f"{settings.FRONTEND_URL}/reset-password?token={reset_token}"
+        subject = "Password Reset Request"
+        text_body = f"Click the link below to reset your password:\n{reset_link}"
+        html_body = f"""
+        <p>Click the link below to reset your password:</p>
+        <a href="{reset_link}">Reset Password</a>
+        """
+
+        # Send the email
+        await send_email(subject, text_body, [email], html_body=html_body)
     
     # Always return True to prevent email enumeration
     return True
@@ -133,6 +164,21 @@ async def reset_password(token: str, new_password: str, db: AsyncSession) -> boo
     # Hash the new password and update the user record.
     user.password_hash = hash_password(new_password)
     await db.commit()
+    await db.refresh(user)
+
+    # Prepare the email content.
+    subject = "Your Password Has Been Reset"
+    text_body = (
+        "Your password has been successfully reset. "
+        "If you did not initiate this reset, please contact support immediately."
+    )
+    html_body = f"""
+    <p>Your password has been successfully reset.</p>
+    <p>If you did not initiate this reset, please <a href="{settings.SUPPORT_URL}">contact support</a> immediately.</p>
+    """
+    # Send the notification email.
+    await send_email(subject, text_body, [user.email], html_body=html_body)
+
     return True
 
 async def change_password(user: User, current_password: str, new_password: str, db: AsyncSession) -> bool:
@@ -147,4 +193,15 @@ async def change_password(user: User, current_password: str, new_password: str, 
     db.add(user)
     await db.commit()
     await db.refresh(user)
+
+     # Send password change notification email
+    subject = "Your Password Has Been Changed"
+    text_body = "Your password has been successfully changed. If you did not perform this action, please contact support immediately."
+    html_body = """
+    <p>Your password has been successfully changed.</p>
+    <p>If you did not perform this action, please <a href="{support_link}">contact support</a> immediately.</p>
+    """.format(support_link=settings.SUPPORT_URL)
+
+    await send_email(subject, text_body, [user.email], html_body=html_body)
+
     return True
