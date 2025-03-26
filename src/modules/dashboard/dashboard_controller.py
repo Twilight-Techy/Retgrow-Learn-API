@@ -95,3 +95,21 @@ async def progress_overview(
     """
     overview = await dashboard_service.get_progress_overview(str(current_user.id), db)
     return overview
+
+@router.get("/recommended-courses", response_model=List[schemas.CourseResponse])
+async def get_recommended_courses(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session)
+):
+    """
+    Retrieve recommended courses for the current user based on their active track.
+    Only courses in the user's current track that they are not already enrolled in will be returned,
+    sorted by the track-specific order.
+    """
+    recommended_courses = await dashboard_service.get_recommended_courses(str(current_user.id), db)
+    if not recommended_courses:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No recommended courses available."
+        )
+    return recommended_courses

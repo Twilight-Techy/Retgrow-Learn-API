@@ -2,11 +2,11 @@
 
 from typing import List, Optional
 import uuid
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models.models import Module, Track, TrackCourse
+from src.models.models import LearningPath, Module, Track, TrackCourse
 
 async def get_all_tracks(
     db: AsyncSession, 
@@ -136,3 +136,20 @@ async def get_track_curriculum(slug: str, db: AsyncSession) -> List[dict]:
         })
 
     return curriculum
+
+async def get_popular_tracks(db: AsyncSession, limit: int = 3) -> List[Track]:
+    """
+    Retrieve the top 'limit' popular tracks, determined by the number of LearningPath records
+    (enrollments) for each track.
+    """
+    stmt = (
+        select(Track, func.count(LearningPath.user_id).label("popularity"))
+        .join(LearningPath, LearningPath.track_id == Track.id)
+        .group_by(Track.id)
+        .order_by(func.count(LearningPath.user_id).desc())
+        .limit(limit)
+    )
+    result = await db.execute(stmt)
+    # Each row is a tuple (Track, popularity). We only need the Track instance.
+    popular_tracks = [row[0] for row in result.all()]
+    return popular_tracks

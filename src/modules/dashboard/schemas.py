@@ -1,7 +1,7 @@
 # src/dashboard/schemas.py
 
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 
 # Reuse CourseResponse from courses if available;
@@ -58,6 +58,21 @@ class RecentAchievementResponse(BaseModel):
 class ProgressOverviewItem(BaseModel):
     name: str
     value: int
+
+    class Config:
+        from_attributes = True
+
+class CourseResponse(BaseModel):
+    id: str
+    track_id: str
+    title: str
+    description: Optional[str] = None
+    image_url: Optional[str] = None
+    level: str
+    duration: Optional[str] = None
+    price: float
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         from_attributes = True

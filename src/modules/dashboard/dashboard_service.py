@@ -5,7 +5,7 @@ from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta, timezone
 
-from src.models.models import UserAchievement, UserCourse, Course, UserResource, Resource, Deadline
+from src.models.models import LearningPath, TrackCourse, UserAchievement, UserCourse, Course, UserResource, Resource, Deadline
 
 # Service function to get enrolled courses for a user.
 async def get_enrolled_courses(user_id: str, db: AsyncSession) -> List[Course]:
@@ -118,3 +118,57 @@ async def get_progress_overview(user_id: str, db: AsyncSession, limit: int = 0) 
         {"name": "In Progress", "value": in_progress_pct},
         {"name": "Not Started", "value": not_started_pct},
     ]
+
+async def get_recommended_courses(user_id: str, db: AsyncSession) -> List[Course]:
+    """
+    Returns recommended courses for the user based on their current track enrollment.
+    The logic:
+      1. Retrieve the user's active learning path (completed_at is null).
+      2. Retrieve all courses for that track from the TrackCourse association (with order).
+      3. Retrieve courses the user is already enrolled in from UserCourse.
+      4. Exclude already enrolled courses and return the remaining ones, sorted by TrackCourse.order.
+    """
+    # 1. Get the active learning path for the user.
+    lp_result = await db.execute(
+        select(LearningPath).where(
+            LearningPath.user_id == user_id,
+            LearningPath.completed_at.is_(None)
+        )
+    )
+    learning_path = lp_result.scalars().first()
+    if not learning_path:
+        return []
+    
+    track_id = learning_path.track_id
+
+    # 2. Retrieve all courses for the track using TrackCourse association.
+    tc_result = await db.execute(
+        select(TrackCourse)
+        .where(TrackCourse.track_id == track_id)
+        .order_by(TrackCourse.order.asc())
+    )
+    track_course_records = tc_result.scalars().all()
+    # Build a set of all course IDs in the track and a mapping for ordering.
+    all_course_ids = {tc.course_id for tc in track_course_records}
+    order_map = {tc.course_id: tc.order for tc in track_course_records}
+
+    # 3. Retrieve courses the user is already enrolled in.
+    uc_result = await db.execute(
+        select(UserCourse).where(UserCourse.user_id == user_id)
+    )
+    user_course_records = uc_result.scalars().all()
+    enrolled_course_ids = {uc.course_id for uc in user_course_records}
+
+    # 4. Recommended courses: courses in the track that the user is not enrolled in.
+    recommended_ids = list(all_course_ids - enrolled_course_ids)
+    if not recommended_ids:
+        return []
+
+    # Retrieve the Course objects for the recommended_ids.
+    courses_result = await db.execute(
+        select(Course).where(Course.id.in_(recommended_ids))
+    )
+    recommended_courses = courses_result.scalars().all()
+    # Sort the courses by the order defined in the TrackCourse association.
+    recommended_courses.sort(key=lambda course: order_map.get(course.id, 0))
+    return recommended_courses

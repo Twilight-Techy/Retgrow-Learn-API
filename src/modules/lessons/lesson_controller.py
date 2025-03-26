@@ -90,7 +90,7 @@ async def complete_lesson(
 
 
 @router.get("/{lesson_id}", response_model=schemas.LessonResponse)
-async def get_lesson_endpoint(
+async def get_lesson(
     lesson_id: str,
     db: AsyncSession = Depends(get_db_session)
 ):

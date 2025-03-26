@@ -108,3 +108,18 @@ async def get_track_curriculum(
             detail="Track or curriculum not found."
         )
     return curriculum
+
+@router.get("/popular", response_model=List[schemas.TrackResponse])
+async def get_popular_tracks(
+    db: AsyncSession = Depends(get_db_session)
+):
+    """
+    Retrieve the top 3 popular tracks based on the number of enrollments.
+    """
+    popular_tracks = await track_service.get_popular_tracks(db, limit=3)
+    if not popular_tracks:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No popular tracks found."
+        )
+    return popular_tracks
