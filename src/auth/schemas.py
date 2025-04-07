@@ -1,7 +1,9 @@
 # src/auth/schemas.py
 
-from typing import Annotated
+from typing import Annotated, Optional
 from pydantic import BaseModel, EmailStr, Field, model_validator
+
+from src.models.models import UserRole
 
 class LoginRequest(BaseModel):
     email: str
@@ -17,6 +19,7 @@ class SignupRequest(BaseModel):
     password: str
     first_name: str
     last_name: str
+    role: Optional[UserRole] = UserRole.STUDENT
 
 class SignupResponse(BaseModel):
     access_token: str

@@ -55,7 +55,7 @@ async def signup(
     if not access_token:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User with this email already exists"
+            detail="Invalid signup data or user already exists"
         )
     return schemas.SignupResponse(access_token=access_token)
 

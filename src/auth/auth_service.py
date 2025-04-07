@@ -1,11 +1,12 @@
 # src/auth/auth_service.py
 
 from datetime import datetime, timedelta, timezone
+from fastapi import HTTPException, status
 import jwt
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from passlib.context import CryptContext
-from jwt.exceptions import JWTDecodeError
+from jwt.exceptions import DecodeError
 
 from src.common.config import settings
 from src.common.utils.email import send_email
@@ -34,7 +35,19 @@ async def create_user(user_data: dict, db: AsyncSession):
     result = await db.execute(select(User).where(User.email == user_data["email"]))
     existing_user = result.scalars().first()
     if existing_user:
-        return None  # Alternatively, you might raise an exception
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User with this email already exists"
+        )
+    
+    # Check if user with provided username already exists
+    result = await db.execute(select(User).where(User.username == user_data["username"]))
+    existing_user = result.scalars().first()
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User with this username already exists"
+        )
 
     # Create a new User instance
     new_user = User(
@@ -43,7 +56,7 @@ async def create_user(user_data: dict, db: AsyncSession):
         password_hash=hash_password(user_data["password"]),
         first_name=user_data["first_name"],
         last_name=user_data["last_name"],
-        role="student"  # Default role, adjust as necessary
+        role=user_data["role"],
     )
     db.add(new_user)
     await db.commit()
@@ -89,9 +102,15 @@ async def authenticate_user(email: str, password: str, db: AsyncSession):
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalars().first()
     if not user:
-        return None
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="The email you provided does not exist",
+        )
     if not verify_password(password, user.password_hash):
-        return None
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials provided",
+        )
     return user
 
 async def login_user(email: str, password: str, db: AsyncSession) -> str:
@@ -99,7 +118,7 @@ async def login_user(email: str, password: str, db: AsyncSession) -> str:
     user = await authenticate_user(email, password, db)
     if not user:
         return None
-    record_login_event(user.id)
+    record_login_event(user.id, db)
     access_token_expires = timedelta(minutes=settings.JWT_EXPIRATION_MINUTES)
     access_token = create_access_token(data={"sub": str(user.id)}, expires_delta=access_token_expires)
     return user, access_token
@@ -152,7 +171,7 @@ async def reset_password(token: str, new_password: str, db: AsyncSession) -> boo
         email: str = payload.get("sub")
         if email is None:
             return False
-    except JWTDecodeError:
+    except DecodeError:
         return False
 
     # Look up the user by email.
