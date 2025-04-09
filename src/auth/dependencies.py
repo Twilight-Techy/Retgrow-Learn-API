@@ -1,7 +1,7 @@
 # src/auth/dependencies.py
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from jwt.exceptions import DecodeError
@@ -11,10 +11,10 @@ from src.common.config import settings
 from src.common.database.database import get_db_session
 from src.models.models import User
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+bearer_scheme = HTTPBearer()
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    token: str = Depends(bearer_scheme),
     db: AsyncSession = Depends(get_db_session)
 ) -> User:
     """
