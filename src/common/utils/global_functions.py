@@ -3,7 +3,7 @@ from typing import Any, Dict, Union
 from fastapi import HTTPException, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models.models import User
+from src.models.models import User, UserRole
 
 def resPayloadData(
     code: int,
@@ -60,7 +60,7 @@ async def award_xp(user: User, db: AsyncSession, amount: int = 5):
     await db.refresh(user)
 
 def ensure_instructor_or_admin(current_user: User):
-    if current_user.role not in ["instructor", "admin"]:
+    if current_user.role not in [UserRole.TUTOR, UserRole.ADMIN]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to perform this action."

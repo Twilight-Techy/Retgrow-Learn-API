@@ -93,7 +93,7 @@ async def reset_password(
         )
     return schemas.ResetPasswordResponse(message="Password reset successful.")
 
-@router.post("/change-password", response_model=dict)
+@router.post("/change-password", response_model=schemas.ChangePasswordResponse)
 async def change_password(
     change_req: schemas.ChangePasswordRequest,
     current_user: User = Depends(get_current_user),

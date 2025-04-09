@@ -35,6 +35,9 @@ class ResetPasswordRequest(BaseModel):
     token: str
     new_password: Annotated[str, Field(min_length=8)]  # Enforce a minimum length
 
+class ChangePasswordResponse(BaseModel):
+    message: str
+
 class ResetPasswordResponse(BaseModel):
     message: str
 
