@@ -6,7 +6,7 @@ from pydantic import BaseModel, EmailStr, Field, model_validator
 from src.models.models import UserRole
 
 class LoginRequest(BaseModel):
-    email: str
+    email: EmailStr
     password: str
 
 class TokenResponse(BaseModel):
