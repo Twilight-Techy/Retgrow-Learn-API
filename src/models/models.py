@@ -49,11 +49,6 @@ class UserLogin(Base):
     def __repr__(self):
         return f"<UserLogin(id={self.id}, user_id={self.user_id}, login_at={self.login_at})>"
 
-class TrackLevel(enum.Enum):
-    BEGINNER = "beginner"
-    INTERMEDIATE = "intermediate"
-    ADVANCED = "advanced"
-
 class Track(Base):
     __tablename__ = "tracks"
 
@@ -62,7 +57,7 @@ class Track(Base):
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     image_url = Column(String(255), nullable=True)
-    level = Column(SAEnum(TrackLevel), nullable=False, default=TrackLevel.BEGINNER)
+    level = Column(String(50), nullable=False, default="Beginner to Advanced")
     duration = Column(String(50), nullable=True)
     prerequisites = Column(ARRAY(String), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
@@ -71,6 +66,10 @@ class Track(Base):
     def __repr__(self):
         return f"<Track(id={self.id}, title={self.title}, level={self.level.value})>"
 
+class CourseLevel(enum.Enum):
+    BEGINNER = "beginner"
+    INTERMEDIATE = "intermediate"
+    ADVANCED = "advanced"
 class Course(Base):
     __tablename__ = "courses"
 
@@ -79,7 +78,7 @@ class Course(Base):
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     image_url = Column(String(255), nullable=True)
-    level = Column(SAEnum(TrackLevel), nullable=False, default=TrackLevel.BEGINNER)
+    level = Column(SAEnum(CourseLevel), nullable=False)
     duration = Column(String(50), nullable=True)
     price = Column(Numeric(10, 2), nullable=False, default=0.00)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())

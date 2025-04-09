@@ -1,7 +1,7 @@
 # src/auth/dependencies.py
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from jwt.exceptions import DecodeError
@@ -14,12 +14,14 @@ from src.models.models import User
 bearer_scheme = HTTPBearer()
 
 async def get_current_user(
-    token: str = Depends(bearer_scheme),
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     db: AsyncSession = Depends(get_db_session)
 ) -> User:
     """
     Dependency to retrieve the current user based on the JWT token provided in the Authorization header.
     """
+    token = credentials.credentials  # ✅ extract the raw token string
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
