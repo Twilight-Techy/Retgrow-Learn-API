@@ -1,8 +1,8 @@
 """Set up database models
 
-Revision ID: d5e83859ad9f
+Revision ID: 2be74e5e5f78
 Revises: 
-Create Date: 2025-02-11 17:51:39.825796
+Create Date: 2025-04-09 16:06:18.193605
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'd5e83859ad9f'
+revision: str = '2be74e5e5f78'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -29,14 +29,6 @@ def upgrade() -> None:
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_table('contact_forms',
-    sa.Column('id', sa.UUID(), nullable=False),
-    sa.Column('name', sa.String(length=255), nullable=False),
-    sa.Column('email', sa.String(length=255), nullable=False),
-    sa.Column('message', sa.Text(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.PrimaryKeyConstraint('id')
-    )
     op.create_table('skills',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('name', sa.String(length=255), nullable=False),
@@ -49,8 +41,9 @@ def upgrade() -> None:
     sa.Column('title', sa.String(length=255), nullable=False),
     sa.Column('description', sa.Text(), nullable=True),
     sa.Column('image_url', sa.String(length=255), nullable=True),
-    sa.Column('level', sa.Enum('BEGINNER', 'INTERMEDIATE', 'ADVANCED', name='tracklevel'), nullable=False),
+    sa.Column('level', sa.String(length=50), nullable=False),
     sa.Column('duration', sa.String(length=50), nullable=True),
+    sa.Column('prerequisites', sa.ARRAY(sa.String()), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('id')
@@ -65,6 +58,7 @@ def upgrade() -> None:
     sa.Column('last_name', sa.String(length=50), nullable=False),
     sa.Column('bio', sa.Text(), nullable=True),
     sa.Column('avatar_url', sa.String(length=255), nullable=True),
+    sa.Column('xp', sa.Integer(), nullable=True),
     sa.Column('role', sa.Enum('STUDENT', 'TUTOR', 'ADMIN', name='userrole'), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
@@ -78,7 +72,7 @@ def upgrade() -> None:
     sa.Column('title', sa.String(length=255), nullable=False),
     sa.Column('description', sa.Text(), nullable=True),
     sa.Column('image_url', sa.String(length=255), nullable=True),
-    sa.Column('level', sa.Enum('BEGINNER', 'INTERMEDIATE', 'ADVANCED', name='tracklevel'), nullable=False),
+    sa.Column('level', sa.Enum('BEGINNER', 'INTERMEDIATE', 'ADVANCED', name='courselevel'), nullable=False),
     sa.Column('duration', sa.String(length=50), nullable=True),
     sa.Column('price', sa.Numeric(precision=10, scale=2), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
@@ -122,6 +116,14 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_user_achievements_achievement_id'), 'user_achievements', ['achievement_id'], unique=False)
     op.create_index(op.f('ix_user_achievements_user_id'), 'user_achievements', ['user_id'], unique=False)
+    op.create_table('user_logins',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('user_id', sa.UUID(), nullable=False),
+    sa.Column('login_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_user_logins_user_id'), 'user_logins', ['user_id'], unique=False)
     op.create_table('user_skills',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
@@ -167,6 +169,7 @@ def upgrade() -> None:
     sa.Column('current_course_id', sa.UUID(), nullable=False),
     sa.Column('progress', sa.Float(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('completed_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.ForeignKeyConstraint(['current_course_id'], ['courses.id'], ),
     sa.ForeignKeyConstraint(['track_id'], ['tracks.id'], ),
@@ -199,6 +202,14 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_quizzes_course_id'), 'quizzes', ['course_id'], unique=False)
+    op.create_table('track_courses',
+    sa.Column('track_id', sa.UUID(), nullable=False),
+    sa.Column('course_id', sa.UUID(), nullable=False),
+    sa.Column('order', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['course_id'], ['courses.id'], ),
+    sa.ForeignKeyConstraint(['track_id'], ['tracks.id'], ),
+    sa.PrimaryKeyConstraint('track_id', 'course_id')
+    )
     op.create_table('user_courses',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
@@ -223,6 +234,14 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_user_resources_resource_id'), 'user_resources', ['resource_id'], unique=False)
     op.create_index(op.f('ix_user_resources_user_id'), 'user_resources', ['user_id'], unique=False)
+    op.create_table('course_quizzes',
+    sa.Column('course_id', sa.UUID(), nullable=False),
+    sa.Column('quiz_id', sa.UUID(), nullable=False),
+    sa.Column('order', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['course_id'], ['courses.id'], ),
+    sa.ForeignKeyConstraint(['quiz_id'], ['quizzes.id'], ),
+    sa.PrimaryKeyConstraint('course_id', 'quiz_id')
+    )
     op.create_table('discussion_replies',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('discussion_id', sa.UUID(), nullable=False),
@@ -301,12 +320,14 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_discussion_replies_user_id'), table_name='discussion_replies')
     op.drop_index(op.f('ix_discussion_replies_discussion_id'), table_name='discussion_replies')
     op.drop_table('discussion_replies')
+    op.drop_table('course_quizzes')
     op.drop_index(op.f('ix_user_resources_user_id'), table_name='user_resources')
     op.drop_index(op.f('ix_user_resources_resource_id'), table_name='user_resources')
     op.drop_table('user_resources')
     op.drop_index(op.f('ix_user_courses_user_id'), table_name='user_courses')
     op.drop_index(op.f('ix_user_courses_course_id'), table_name='user_courses')
     op.drop_table('user_courses')
+    op.drop_table('track_courses')
     op.drop_index(op.f('ix_quizzes_course_id'), table_name='quizzes')
     op.drop_table('quizzes')
     op.drop_index(op.f('ix_modules_course_id'), table_name='modules')
@@ -323,6 +344,8 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_user_skills_user_id'), table_name='user_skills')
     op.drop_index(op.f('ix_user_skills_skill_id'), table_name='user_skills')
     op.drop_table('user_skills')
+    op.drop_index(op.f('ix_user_logins_user_id'), table_name='user_logins')
+    op.drop_table('user_logins')
     op.drop_index(op.f('ix_user_achievements_user_id'), table_name='user_achievements')
     op.drop_index(op.f('ix_user_achievements_achievement_id'), table_name='user_achievements')
     op.drop_table('user_achievements')
@@ -338,6 +361,5 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_tracks_slug'), table_name='tracks')
     op.drop_table('tracks')
     op.drop_table('skills')
-    op.drop_table('contact_forms')
     op.drop_table('achievements')
     # ### end Alembic commands ###
