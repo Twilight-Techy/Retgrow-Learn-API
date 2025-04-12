@@ -40,3 +40,10 @@ async def send_verification_email(recipient_email: str, verification_link: str) 
         verification_link (str): The link for email verification.
     """
     await send_email("Email Verification", f"Please click the following link to verify your email: {verification_link}", [recipient_email])
+
+# # --- Test Function ---
+# async def test_email() -> None:
+#     """Sends a test email to the CONTACT_RECIPIENT."""
+#     await send_email(
+#         "Test Email", "This is a test email.", [settings.CONTACT_RECIPIENT]
+#     )

@@ -1,5 +1,7 @@
 # src/main.py
 
+# import asyncio
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,11 +9,14 @@ from fastapi.responses import HTMLResponse
 from src.common.database.database import connect_to_db, close_db_connection
 from src.common.config import settings
 from src.router.routers import include_routers
+from src.common.utils.email import test_email
 
 # Lifespan context manager for startup and shutdown events
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await connect_to_db()
+    # Schedule test_email to run in the background within the existing event loop
+    # asyncio.create_task(test_email())
     yield
     await close_db_connection()
 
