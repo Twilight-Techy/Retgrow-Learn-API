@@ -4,7 +4,7 @@ from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 # Load environment variables from the correct .env file
-os.environ["APP_ENV"] = "production"  # Default to development
+os.environ["APP_ENV"] = "development"  # Default to development
 env_file = ".env.development" if os.getenv("APP_ENV") == "development" else ".env.production"
 load_dotenv(env_file)  # Load the .env file
 

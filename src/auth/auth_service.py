@@ -3,6 +3,7 @@
 from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException, status
 import jwt
+from sqlalchemy import or_
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from passlib.context import CryptContext
@@ -81,9 +82,9 @@ async def signup_user(user_data: dict, db: AsyncSession) -> str:
             detail="Invalid signup data or user already exists"
         )
     
-    user = await create_user(user_data, db)
+    verification_code = new_user.verification_code
 
-    await send_verification_email(user.email, user.first_name, verification_code)
+    await send_verification_email(new_user.email, new_user.first_name, verification_code)
 
 async def verify_user(verification_data: dict, db: AsyncSession):
     """

@@ -67,7 +67,7 @@ async def verify_user(
 ):
     """Verify a user's email using a verification code."""
     access_token = await auth_service.verify_user(verification_data.model_dump(), db)
-    if not success:
+    if not access_token:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid verification code."
