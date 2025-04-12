@@ -2,6 +2,7 @@
 
 from typing import Annotated, Optional
 from pydantic import BaseModel, EmailStr, Field, model_validator
+from fastapi import HTTPException
 
 from src.models.models import UserRole
 
@@ -66,7 +67,15 @@ class ChangePasswordRequest(BaseModel):
         new = values.new_password
         confirm = values.confirm_new_password
         if new != confirm:
-            raise ValueError("new_password and confirm_new_password must match")
+            raise HTTPException(
+                status_code=400,
+                detail="New password and confirmation do not match."
+            )
+        if new == values.current_password:
+            raise HTTPException(
+                status_code=400,
+                detail="New password cannot be the same as the current password."
+            )
         return values
 
     class Config:
