@@ -33,22 +33,29 @@ def hash_password(password: str) -> str:
 
 async def create_user(user_data: dict, db: AsyncSession):
     # Check if user with provided email already exists
-    result = await db.execute(select(User).where(User.email == user_data["email"]))
-    existing_user = result.scalars().first()
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User with this email already exists"
+    result = await db.execute(
+        select(User).where(
+            or_(
+                User.email == user_data["email"],
+                User.username == user_data["username"]
+            )
         )
-    
-    # Check if user with provided username already exists
-    result = await db.execute(select(User).where(User.username == user_data["username"]))
+    )
     existing_user = result.scalars().first()
+
     if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User with this username already exists"
-        )
+        if existing_user.email == user_data["email"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A user with this email already exists"
+            )
+        elif existing_user.username == user_data["username"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A user with this username already exists"
+            )
+
+    verification_code = generate_verification_code()
 
     # Create a new User instance
     new_user = User(
@@ -57,6 +64,8 @@ async def create_user(user_data: dict, db: AsyncSession):
         password_hash=hash_password(user_data["password"]),
         first_name=user_data["first_name"],
         last_name=user_data["last_name"],
+        verification_code=verification_code,
+        role=user_data["role"]
     )
     db.add(new_user)
     await db.commit()
@@ -65,31 +74,44 @@ async def create_user(user_data: dict, db: AsyncSession):
 
 async def signup_user(user_data: dict, db: AsyncSession) -> str:
     """Create a new user and send a verification email."""
-    verification_code = generate_verification_code()
-    user_data["verification_code"] = verification_code
-    user_data["is_verified"] = False
+    new_user = await create_user(user_data, db)
+    if not new_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid signup data or user already exists"
+        )
+    
     user = await create_user(user_data, db)
-    await db.refresh(user)
 
-    access_token_expires = timedelta(minutes=settings.JWT_EXPIRATION_MINUTES)
-    access_token = create_access_token(data={"sub": str(user.id)}, expires_delta=access_token_expires)
     await send_verification_email(user.email, user.first_name, verification_code)
-    return "Verification email sent"
 
-async def verify_user(verification_code: str, db: AsyncSession):
+async def verify_user(verification_data: dict, db: AsyncSession):
     """
     Verify a user's email using the provided verification code.
     """
-    result = await db.execute(select(User).where(User.verification_code == verification_code))
+    result = await db.execute(select(User).where(User.email == verification_data["email"]))
     user = result.scalars().first()
 
     if not user:
-        return None
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The user does not exist."
+        )
+
+    if user.verification_code != verification_data["verification_code"]:    
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid verification code."
+        )
 
     user.is_verified = True
     await db.commit()
     await db.refresh(user)
-    return user
+
+    access_token_expires = timedelta(minutes=settings.JWT_EXPIRATION_MINUTES)
+    access_token = create_access_token(data={"sub": str(user.id)}, expires_delta=access_token_expires)
+
+    return access_token
 
 async def record_login_event(user_id: str, db: AsyncSession):
     login_event = UserLogin(user_id=user_id)

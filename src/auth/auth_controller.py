@@ -51,28 +51,28 @@ async def signup(
     - **first_name**: The user's first name.
     - **last_name**: The user's last name.
     """
-    access_token = await auth_service.signup_user(signup_data.model_dump(), db)
-    if not access_token:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid signup data or user already exists"
-        )
-    return schemas.SignupResponse(access_token=access_token)
+    await auth_service.signup_user(signup_data.model_dump(), db)
+    # if not access_token:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_400_BAD_REQUEST,
+    #         detail="Invalid signup data or user already exists"
+    #     )
+    return schemas.SignupResponse()
 
 
 @router.get("/verify")
-async def verify_email(
-    verification_code: Annotated[str, Query(description="The verification code from the email link")],
+async def verify_user(
+    verification_data: schemas.VerifyUserRequest,
     db: AsyncSession = Depends(get_db_session)
 ):
     """Verify a user's email using a verification code."""
-    success = await auth_service.verify_user(verification_code, db)
+    access_token = await auth_service.verify_user(verification_data.model_dump(), db)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid verification code."
         )
-    return {"message": "Email verified successfully."}
+    return schemas.VerifyUserResponse(access_token=access_token)
 
 
 @router.post("/forgot-password", response_model=schemas.ForgotPasswordResponse)

@@ -22,6 +22,14 @@ class SignupRequest(BaseModel):
     role: Optional[UserRole] = UserRole.STUDENT
 
 class SignupResponse(BaseModel):
+    message: str = "Verification email sent successfully."
+
+class VerifyUserRequest(BaseModel):
+    email: EmailStr
+    verification_code: str
+
+class VerifyUserResponse(BaseModel):
+    message: str = "User has been verified successfully."
     access_token: str
     token_type: str = "bearer"
 

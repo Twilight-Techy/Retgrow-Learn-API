@@ -30,20 +30,25 @@ async def send_email(subject: str, body: str, recipients: List[str], html_body: 
         password=settings.SMTP_PASSWORD,
         start_tls=True,
     )
-
-async def send_verification_email(recipient_email: str, verification_link: str) -> None:
+async def send_verification_email(recipient_email: str, first_name:str, verification_code: str) -> None:
     """
     Sends a verification email to the specified recipient.
     
     Args:
         recipient_email (str): The email address of the recipient.
-        verification_link (str): The link for email verification.
+        first_name(str): The first name of the user.
+        verification_code(str): The code for the verification.
     """
-    await send_email("Email Verification", f"Please click the following link to verify your email: {verification_link}", [recipient_email])
+    verification_link = f"{settings.FRONTEND_URL}/auth/verify?code={verification_code}"
 
-# # --- Test Function ---
-# async def test_email() -> None:
-#     """Sends a test email to the CONTACT_RECIPIENT."""
-#     await send_email(
-#         "Test Email", "This is a test email.", [settings.CONTACT_RECIPIENT]
-#     )
+    email_content = f"""
+Dear {first_name},
+
+Please click the following link to verify your email: {verification_link}
+
+Or use the following code: {verification_code}
+"""
+    await send_email("Email Verification", email_content, [recipient_email])
+
+
+
