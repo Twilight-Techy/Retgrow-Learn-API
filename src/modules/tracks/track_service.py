@@ -53,11 +53,11 @@ async def create_track(track_data: dict, db: AsyncSession) -> Track:
         id=uuid.uuid4(),  # Include if your model does not auto-generate the id.
         slug=track_data["slug"],
         title=track_data["title"],
-        description=track_data.get("description"),
-        image_url=track_data.get("image_url"),
+        description=track_data["description"],
+        image_url=track_data["image_url"],
         level=track_data["level"],
-        duration=track_data.get("duration"),
-        prerequisites=track_data.get("prerequisites") or []
+        duration=track_data["duration"],
+        prerequisites=track_data["prerequisites"] or []
     )
     db.add(new_track)
     await db.commit()

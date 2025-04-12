@@ -2,10 +2,11 @@
 
 from datetime import datetime
 from typing import List, Optional
+from uuid import UUID
 from pydantic import BaseModel
 
 class TrackResponse(BaseModel):
-    id: str
+    id: UUID
     slug: str
     title: str
     description: str | None = None
