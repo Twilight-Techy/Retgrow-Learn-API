@@ -277,6 +277,6 @@ async def change_password(user: User, current_password: str, new_password: str, 
     <p>If you did not perform this action, please <a href="{support_link}">contact support</a> immediately.</p>
     """.format(support_link=settings.SUPPORT_URL)
 
-    background_tasks.add(send_email, subject, text_body, [user.email], html_body=html_body)
+    background_tasks.add_task(send_email, subject, text_body, [user.email], html_body=html_body)
 
     return True
