@@ -107,7 +107,7 @@ async def resend_verification_email(email: str, db: AsyncSession, background_tas
     await db.refresh(user)
     background_tasks.add_task(send_verification_email, user.email, user.first_name, new_verification_code)
 
-async def verify_user(verification_data: dict, db: AsyncSession):
+async def verify_user(verification_data: dict, db: AsyncSession, background_tasks: BackgroundTasks) -> str:
     """Verify a user's email using the provided verification code.
     """
     result = await db.execute(select(User).where(User.email == verification_data["email"]))
@@ -137,6 +137,14 @@ async def verify_user(verification_data: dict, db: AsyncSession):
 
     access_token_expires = timedelta(minutes=settings.JWT_EXPIRATION_MINUTES)
     access_token = create_access_token(data={"sub": str(user.id)}, expires_delta=access_token_expires)
+
+    background_tasks.add_task(
+        send_email,
+        subject="Email Verification Successful",
+        body="Your email has been successfully verified.",
+        recipients=[user.email],
+        html_body=f"<p>Your email has been successfully verified.</p>"
+    )
 
     return access_token
 
@@ -179,7 +187,7 @@ def create_reset_token(email: str, expires_delta: timedelta = None) -> str:
     reset_token = jwt.encode(to_encode, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
     return reset_token
 
-async def process_forgot_password(email: str, db: AsyncSession) -> bool:
+async def process_forgot_password(email: str, db: AsyncSession, background_tasks: BackgroundTasks) -> bool:
     """
     Process a forgot-password request.
     
@@ -204,12 +212,12 @@ async def process_forgot_password(email: str, db: AsyncSession) -> bool:
         """
 
         # Send the email
-        await send_email(subject, text_body, [email], html_body=html_body)
+        background_tasks.add_task(send_email, subject, text_body, [email], html_body=html_body)
     
     # Always return True to prevent email enumeration
     return True
 
-async def reset_password(token: str, new_password: str, db: AsyncSession) -> bool:
+async def reset_password(token: str, new_password: str, db: AsyncSession, background_tasks: BackgroundTasks) -> bool:
     """
     Verify the reset token, update the user's password, and return True if successful.
     """
@@ -244,11 +252,11 @@ async def reset_password(token: str, new_password: str, db: AsyncSession) -> boo
     <p>If you did not initiate this reset, please <a href="{settings.SUPPORT_URL}">contact support</a> immediately.</p>
     """
     # Send the notification email.
-    await send_email(subject, text_body, [user.email], html_body=html_body)
+    background_tasks.add_task(send_email, subject, text_body, [user.email], html_body=html_body)
 
     return True
 
-async def change_password(user: User, current_password: str, new_password: str, db: AsyncSession) -> bool:
+async def change_password(user: User, current_password: str, new_password: str, db: AsyncSession, background_tasks: BackgroundTasks) -> bool:
     """
     Verify the current password, then update the user's password with the new one.
     Returns True if the password was updated, or False if the current password was incorrect.
@@ -269,6 +277,6 @@ async def change_password(user: User, current_password: str, new_password: str, 
     <p>If you did not perform this action, please <a href="{support_link}">contact support</a> immediately.</p>
     """.format(support_link=settings.SUPPORT_URL)
 
-    await send_email(subject, text_body, [user.email], html_body=html_body)
+    background_tasks.add(send_email, subject, text_body, [user.email], html_body=html_body)
 
     return True

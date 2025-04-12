@@ -80,10 +80,11 @@ async def resend_verification(
 @router.post("/verify")
 async def verify_user(
     verification_data: schemas.VerifyUserRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db_session)
 ):
     """Verify a user's email using a verification code."""
-    access_token = await auth_service.verify_user(verification_data.model_dump(), db)
+    access_token = await auth_service.verify_user(verification_data.model_dump(), db, background_tasks)
     if not access_token:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -95,6 +96,7 @@ async def verify_user(
 @router.post("/forgot-password", response_model=schemas.ForgotPasswordResponse)
 async def forgot_password(
     request: schemas.ForgotPasswordRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db_session)
 ):
     """
@@ -102,7 +104,7 @@ async def forgot_password(
     
     The endpoint will always return a success message, even if the email is not associated with any account.
     """
-    await auth_service.process_forgot_password(request.email, db)
+    await auth_service.process_forgot_password(request.email, db, background_tasks)
     return schemas.ForgotPasswordResponse(
         message="If an account with this email exists, a password reset link has been sent."
     )
@@ -110,6 +112,7 @@ async def forgot_password(
 @router.post("/reset-password", response_model=schemas.ResetPasswordResponse)
 async def reset_password(
     payload: schemas.ResetPasswordRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db_session)
 ):
     """
@@ -118,7 +121,7 @@ async def reset_password(
     - **token**: The password reset token.
     - **new_password**: The new password to set.
     """
-    success = await auth_service.reset_password(payload.token, payload.new_password, db)
+    success = await auth_service.reset_password(payload.token, payload.new_password, db, background_tasks)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -129,6 +132,7 @@ async def reset_password(
 @router.post("/change-password", response_model=schemas.ChangePasswordResponse)
 async def change_password(
     change_req: schemas.ChangePasswordRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
@@ -142,7 +146,8 @@ async def change_password(
         current_user,
         change_req.current_password,
         change_req.new_password,
-        db
+        db,
+        background_tasks
     )
     if not success:
         raise HTTPException(
