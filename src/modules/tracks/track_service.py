@@ -2,6 +2,7 @@
 
 from typing import List, Optional
 import uuid
+from fastapi import HTTPException, status
 from sqlalchemy import func, or_
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -49,6 +50,13 @@ async def get_track_by_slug(slug: str, db: AsyncSession) -> Optional[Track]:
     return track
 
 async def create_track(track_data: dict, db: AsyncSession) -> Track:
+    existing_track = await get_track_by_slug(track_data["slug"], db)
+    if existing_track:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Track with this slug already exists."  
+        ) 
+    
     new_track = Track(
         id=uuid.uuid4(),  # Include if your model does not auto-generate the id.
         slug=track_data["slug"],
