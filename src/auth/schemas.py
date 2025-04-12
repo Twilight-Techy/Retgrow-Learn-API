@@ -63,8 +63,8 @@ class ChangePasswordRequest(BaseModel):
 
     @model_validator(mode="after")
     def check_passwords_match(cls, values):
-        new = values.get("new_password")
-        confirm = values.get("confirm_new_password")
+        new = values["new_password"]
+        confirm = values["confirm_new_password"]
         if new != confirm:
             raise ValueError("new_password and confirm_new_password must match")
         return values
