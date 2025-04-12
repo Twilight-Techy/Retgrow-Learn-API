@@ -6,7 +6,7 @@ from uuid import UUID
 from pydantic import BaseModel
 
 class QuizQuestionResponse(BaseModel):
-    id: str
+    id: UUID
     question: str
     options: List[str]
     # Typically, you wouldn't send the correct answer in a quiz retrieval endpoint.
@@ -17,8 +17,8 @@ class QuizQuestionResponse(BaseModel):
         from_attributes = True
 
 class QuizResponse(BaseModel):
-    id: str
-    course_id: str
+    id: UUID
+    course_id: UUID
     title: str
     description: Optional[str] = None
     time_limit: int  # in minutes
@@ -37,7 +37,7 @@ class QuizSubmissionResponse(BaseModel):
     message: str
 
 class QuizCreateRequest(BaseModel):
-    course_id: str
+    course_id: UUID
     title: str
     description: Optional[str] = None
     time_limit: int  # in minutes

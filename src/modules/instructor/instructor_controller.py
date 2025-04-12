@@ -1,5 +1,6 @@
 # src/instructor/course_controller.py
 
+from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
@@ -46,7 +47,7 @@ async def create_course(
 
 @router.get("/courses/{course_id}", response_model=schemas.CourseResponse)
 async def get_course(
-    course_id: str,
+    course_id: UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
@@ -61,7 +62,7 @@ async def get_course(
 
 @router.put("/courses/{course_id}", response_model=schemas.CourseResponse)
 async def update_course(
-    course_id: str,
+    course_id: UUID,
     course_data: schemas.CourseUpdateRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)

@@ -1,6 +1,7 @@
 # src/lessons/lesson_controller.py
 
 from datetime import datetime, timedelta, timezone
+from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,7 +19,7 @@ router = APIRouter(prefix="/courses", tags=["lessons"])
 # GET /courses/{course_id}/lessons - Retrieve lessons for a course
 @router.get("/{course_id}/lessons", response_model=List[schemas.LessonResponse])
 async def get_lessons(
-    course_id: str,
+    course_id: UUID,
     db: AsyncSession = Depends(get_db_session)
 ):
     lessons = await lesson_service.get_lessons_by_course(course_id, db)
@@ -32,8 +33,8 @@ async def get_lessons(
 # PUT /courses/{course_id}/lessons/{lesson_id}/complete - Mark a lesson as completed
 @router.put("/{course_id}/lessons/{lesson_id}/complete", response_model=schemas.CompleteLessonResponse)
 async def complete_lesson(
-    course_id: str,
-    lesson_id: str,
+    course_id: UUID,
+    lesson_id: UUID,
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
@@ -91,7 +92,7 @@ async def complete_lesson(
 
 @router.get("/{lesson_id}", response_model=schemas.LessonResponse)
 async def get_lesson(
-    lesson_id: str,
+    lesson_id: UUID,
     db: AsyncSession = Depends(get_db_session)
 ):
     """

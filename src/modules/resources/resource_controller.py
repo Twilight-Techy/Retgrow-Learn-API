@@ -1,5 +1,6 @@
 # src/resources/resource_controller.py
 
+from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
@@ -20,7 +21,7 @@ async def get_resources(db: AsyncSession = Depends(get_db_session)):
 
 # GET /resources/{resourceId} – Retrieve a specific resource by its ID
 @router.get("/{resourceId}", response_model=schemas.ResourceResponse)
-async def get_resource(resourceId: str, db: AsyncSession = Depends(get_db_session)):
+async def get_resource(resourceId: UUID, db: AsyncSession = Depends(get_db_session)):
     resource = await resource_service.get_resource_by_id(resourceId, db)
     if not resource:
         raise HTTPException(
@@ -31,7 +32,7 @@ async def get_resource(resourceId: str, db: AsyncSession = Depends(get_db_sessio
 
 @router.post("/{resource_id}/view", response_model=schemas.ResourceViewResponse)
 async def record_resource_view(
-    resource_id: str,
+    resource_id: UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
@@ -67,7 +68,7 @@ async def create_resource(
 
 @router.put("/{resource_id}", response_model=schemas.ResourceResponse)
 async def update_resource(
-    resource_id: str,
+    resource_id: UUID,
     resource_request: schemas.ResourceUpdateRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
@@ -84,7 +85,7 @@ async def update_resource(
 
 @router.delete("/{resource_id}", response_model=dict)
 async def delete_resource(
-    resource_id: str,
+    resource_id: UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):

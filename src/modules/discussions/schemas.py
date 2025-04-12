@@ -2,12 +2,13 @@
 
 from datetime import datetime
 from typing import List, Optional
+from uuid import UUID
 from pydantic import BaseModel
 
 class DiscussionReplyResponse(BaseModel):
-    id: str
-    discussion_id: str
-    user_id: str
+    id: UUID
+    discussion_id: UUID
+    user_id: UUID
     content: str
     created_at: datetime
     updated_at: datetime
@@ -16,9 +17,9 @@ class DiscussionReplyResponse(BaseModel):
         from_attributes = True
 
 class DiscussionResponse(BaseModel):
-    id: str
-    course_id: str
-    user_id: str
+    id: UUID
+    course_id: UUID
+    user_id: UUID
     title: str
     content: str
     created_at: datetime

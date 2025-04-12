@@ -2,11 +2,12 @@
 
 from datetime import datetime
 from typing import Optional
+from uuid import UUID
 from pydantic import BaseModel
 
 class LessonResponse(BaseModel):
-    id: str
-    module_id: str
+    id: UUID
+    module_id: UUID
     title: str
     content: Optional[str] = None
     video_url: Optional[str] = None

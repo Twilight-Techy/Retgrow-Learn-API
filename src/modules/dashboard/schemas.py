@@ -2,12 +2,13 @@
 
 from datetime import datetime
 from typing import List, Optional
+from uuid import UUID
 from pydantic import BaseModel
 
 # Reuse CourseResponse from courses if available;
 # otherwise, define a minimal enrolled course schema.
 class EnrolledCourseResponse(BaseModel):
-    id: str
+    id: UUID
     title: str
     description: str | None = None
     image_url: str | None = None
@@ -21,7 +22,7 @@ class EnrolledCourseResponse(BaseModel):
 # Reuse ResourceResponse from resources if available;
 # otherwise, define a minimal resource schema.
 class RecentResourceResponse(BaseModel):
-    id: str
+    id: UUID
     title: str
     description: str | None = None
     type: str
@@ -32,7 +33,7 @@ class RecentResourceResponse(BaseModel):
 
 # A simple deadline schema; in a real app this would come from a dedicated Deadline model.
 class DeadlineResponse(BaseModel):
-    id: str
+    id: UUID
     title: str
     due_date: datetime
 
@@ -46,7 +47,7 @@ class DashboardResponse(BaseModel):
     upcoming_deadlines: List[DeadlineResponse]
 
 class RecentAchievementResponse(BaseModel):
-    id: str
+    id: UUID
     title: str
     description: str | None = None
     icon_url: str | None = None
@@ -63,8 +64,8 @@ class ProgressOverviewItem(BaseModel):
         from_attributes = True
 
 class CourseResponse(BaseModel):
-    id: str
-    track_id: str
+    id: UUID
+    track_id: UUID
     title: str
     description: Optional[str] = None
     image_url: Optional[str] = None

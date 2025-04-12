@@ -6,10 +6,10 @@ from uuid import UUID
 from pydantic import BaseModel
 
 class LearningPathResponse(BaseModel):
-    id: str
-    user_id: str
-    track_id: str
-    current_course_id: str
+    id: UUID
+    user_id: UUID
+    track_id: UUID
+    current_course_id: UUID
     progress: float
     created_at: datetime
     updated_at: datetime
@@ -18,7 +18,7 @@ class LearningPathResponse(BaseModel):
         from_attributes = True
 
 class SkillResponse(BaseModel):
-    id: str
+    id: UUID
     name: str
     description: Optional[str] = None
 
@@ -34,7 +34,7 @@ class UserSkillResponse(BaseModel):
         from_attributes = True
 
 class LearningPathEnrollRequest(BaseModel):
-    track_id: str  # The track the user wants to enroll in
+    track_id: UUID  # The track the user wants to enroll in
 
     class Config:
         from_attributes = True

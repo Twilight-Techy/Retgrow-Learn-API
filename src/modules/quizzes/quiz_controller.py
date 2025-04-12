@@ -1,5 +1,6 @@
 # src/quizzes/quiz_controller.py
 
+from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
@@ -38,7 +39,7 @@ async def get_quizzes_for_track(
     return quizzes_by_track
 
 @router.get("/{quiz_id}", response_model=schemas.QuizResponse)
-async def get_quiz(quiz_id: str, db: AsyncSession = Depends(get_db_session)):
+async def get_quiz(quiz_id: UUID, db: AsyncSession = Depends(get_db_session)):
     """
     Retrieve a specific quiz by its ID.
     """
@@ -52,7 +53,7 @@ async def get_quiz(quiz_id: str, db: AsyncSession = Depends(get_db_session)):
 
 @router.post("/{quiz_id}/submit", response_model=schemas.QuizSubmissionResponse)
 async def submit_quiz(
-    quiz_id: str,
+    quiz_id: UUID,
     submission: schemas.QuizSubmissionRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
@@ -89,7 +90,7 @@ async def create_quiz(
 
 @router.put("/{quiz_id}", response_model=schemas.QuizResponse)
 async def update_quiz(
-    quiz_id: str,
+    quiz_id: UUID,
     quiz_request: schemas.QuizUpdateRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
@@ -106,7 +107,7 @@ async def update_quiz(
 
 @router.delete("/{quiz_id}", response_model=dict)
 async def delete_quiz(
-    quiz_id: str,
+    quiz_id: UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):

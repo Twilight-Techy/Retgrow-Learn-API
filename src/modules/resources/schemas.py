@@ -2,10 +2,11 @@
 
 from datetime import datetime
 from typing import Optional
+from uuid import UUID
 from pydantic import BaseModel
 
 class ResourceResponse(BaseModel):
-    id: str
+    id: UUID
     title: str
     description: Optional[str] = None
     type: str

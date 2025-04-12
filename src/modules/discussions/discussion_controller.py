@@ -1,5 +1,6 @@
 # src/discussions/discussion_controller.py
 
+from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
@@ -14,7 +15,7 @@ router = APIRouter(prefix="/courses", tags=["discussions"])
 # GET /courses/{courseId}/discussions – Retrieve all discussions for a course.
 @router.get("/{courseId}/discussions", response_model=List[schemas.DiscussionResponse])
 async def get_discussions(
-    courseId: str,
+    courseId: UUID,
     db: AsyncSession = Depends(get_db_session)
 ):
     discussions = await discussion_service.get_discussions_by_course(courseId, db)
@@ -23,7 +24,7 @@ async def get_discussions(
 # POST /courses/{courseId}/discussions – Create a new discussion.
 @router.post("/{courseId}/discussions", response_model=schemas.DiscussionResponse)
 async def create_discussion(
-    courseId: str,
+    courseId: UUID,
     discussion: schemas.DiscussionCreateRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
@@ -39,8 +40,8 @@ async def create_discussion(
 # POST /courses/{courseId}/discussions/{discussionId}/replies – Create a new reply.
 @router.post("/{courseId}/discussions/{discussionId}/replies", response_model=schemas.DiscussionReplyResponse)
 async def create_discussion_reply(
-    courseId: str,
-    discussionId: str,
+    courseId: UUID,
+    discussionId: UUID,
     reply: schemas.DiscussionReplyCreateRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)

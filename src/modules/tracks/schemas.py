@@ -44,7 +44,7 @@ class TrackUpdateRequest(BaseModel):
         from_attributes = True
 
 class ModuleResponse(BaseModel):
-    id: str
+    id: UUID
     title: str
     description: Optional[str] = None
     order: int
@@ -53,7 +53,7 @@ class ModuleResponse(BaseModel):
         from_attributes = True
 
 class CurriculumCourseResponse(BaseModel):
-    id: str
+    id: UUID
     title: str
     description: Optional[str] = None
     order: int  # Order of the course in this track
@@ -63,7 +63,7 @@ class CurriculumCourseResponse(BaseModel):
         from_attributes = True
 
 class TrackCurriculumResponse(BaseModel):
-    id: str
+    id: UUID
     title: str
     description: Optional[str] = None
     prerequisites: List[str] = []  # List of topics the user must know to take this track

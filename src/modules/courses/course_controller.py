@@ -1,6 +1,7 @@
 # src/courses/course_controller.py
 
 from typing import List, Optional
+from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,7 +33,7 @@ async def get_courses(
 
 # GET /courses/{course_id} - Retrieve course details by ID
 @router.get("/{course_id}", response_model=schemas.CourseResponse)
-async def get_course(course_id: str, db: AsyncSession = Depends(get_db_session)):
+async def get_course(course_id: UUID, db: AsyncSession = Depends(get_db_session)):
     course = await course_service.get_course_by_id(course_id, db)
     if not course:
         raise HTTPException(
@@ -43,7 +44,7 @@ async def get_course(course_id: str, db: AsyncSession = Depends(get_db_session))
 
 # GET /courses/{course_id}/content - Retrieve detailed course content
 @router.get("/{course_id}/content", response_model=schemas.CourseDetailResponse)
-async def get_course_content(course_id: str, db: AsyncSession = Depends(get_db_session)):
+async def get_course_content(course_id: UUID, db: AsyncSession = Depends(get_db_session)):
     course = await course_service.get_course_content(course_id, db)
     if not course:
         raise HTTPException(
@@ -55,7 +56,7 @@ async def get_course_content(course_id: str, db: AsyncSession = Depends(get_db_s
 # POST /courses/{course_id}/enroll - Enroll the current user in a course
 @router.post("/{course_id}/enroll", response_model=schemas.EnrollmentResponse)
 async def enroll_course(
-    course_id: str,
+    course_id: UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):

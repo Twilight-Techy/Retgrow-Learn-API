@@ -1,10 +1,11 @@
 # src/search/schemas.py
 
 from typing import List, Optional
+from uuid import UUID
 from pydantic import BaseModel
 
 class SearchResultItem(BaseModel):
-    id: str
+    id: UUID
     type: str  # e.g. "course", "track", "resource"
     title: str
     description: Optional[str] = None

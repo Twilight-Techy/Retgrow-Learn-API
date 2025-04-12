@@ -1,11 +1,12 @@
 # src/user/schemas.py
 
 from typing import List, Optional
+from uuid import UUID
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
 
 class ProfileResponse(BaseModel):
-    id: str
+    id: UUID
     username: str
     email: EmailStr
     first_name: str
@@ -27,7 +28,7 @@ class UpdateProfileRequest(BaseModel):
     avatar_url: Optional[str] = None
 
 class CourseProgress(BaseModel):
-    course_id: str
+    course_id: UUID
     progress: float
 
     class Config:

@@ -2,11 +2,12 @@
 
 from datetime import datetime
 from typing import List, Optional
+from uuid import UUID
 from pydantic import BaseModel
 
 class CourseResponse(BaseModel):
-    id: str
-    track_id: str
+    id: UUID
+    track_id: UUID
     title: str
     description: Optional[str] = None
     image_url: Optional[str] = None
@@ -21,7 +22,7 @@ class CourseResponse(BaseModel):
 
 # For the course content endpoint we assume a course is composed of modules that contain lessons.
 class LessonResponse(BaseModel):
-    id: str
+    id: UUID
     title: str
     content: Optional[str] = None
     video_url: Optional[str] = None
@@ -31,7 +32,7 @@ class LessonResponse(BaseModel):
         from_attributes = True
 
 class ModuleResponse(BaseModel):
-    id: str
+    id: UUID
     title: str
     order: int
     lessons: List[LessonResponse] = []
@@ -40,8 +41,8 @@ class ModuleResponse(BaseModel):
         from_attributes = True
 
 class CourseDetailResponse(BaseModel):
-    id: str
-    track_id: str
+    id: UUID
+    track_id: UUID
     title: str
     description: Optional[str] = None
     image_url: Optional[str] = None
