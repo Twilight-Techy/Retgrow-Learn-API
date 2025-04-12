@@ -9,7 +9,7 @@ from fastapi.responses import HTMLResponse
 from src.common.database.database import connect_to_db, close_db_connection
 from src.common.config import settings
 from src.router.routers import include_routers
-from src.common.utils.email import test_email
+# from src.common.utils.email import test_email
 
 # Lifespan context manager for startup and shutdown events
 @asynccontextmanager
