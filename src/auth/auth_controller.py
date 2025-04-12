@@ -1,6 +1,6 @@
 # src/auth/auth_controller.py
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.schemas import SignupRequest, ResendVerificationRequest

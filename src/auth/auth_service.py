@@ -1,7 +1,7 @@
 # src/auth/auth_service.py
 
 from datetime import datetime, timedelta, timezone
-from fastapi import HTTPException, status, BackgroundTasks, Depends
+from fastapi import HTTPException, status, BackgroundTasks
 import jwt
 from sqlalchemy import or_
 from sqlalchemy.future import select
