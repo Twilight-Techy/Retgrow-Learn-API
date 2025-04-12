@@ -30,6 +30,21 @@ async def get_tracks(
     tracks = await track_service.get_all_tracks(db, q, skip, limit)
     return tracks
 
+@router.get("/popular", response_model=List[schemas.TrackResponse])
+async def get_popular_tracks(
+    db: AsyncSession = Depends(get_db_session)
+):
+    """
+    Retrieve the top 3 popular tracks based on the number of enrollments.
+    """
+    popular_tracks = await track_service.get_popular_tracks(db, limit=3)
+    if not popular_tracks:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No popular tracks found."
+        )
+    return popular_tracks
+
 @router.get("/{slug}", response_model=schemas.TrackResponse)
 async def get_track(slug: str, db: AsyncSession = Depends(get_db_session)):
     """
@@ -108,18 +123,3 @@ async def get_track_curriculum(
             detail="Track or curriculum not found."
         )
     return curriculum
-
-@router.get("/popular", response_model=List[schemas.TrackResponse])
-async def get_popular_tracks(
-    db: AsyncSession = Depends(get_db_session)
-):
-    """
-    Retrieve the top 3 popular tracks based on the number of enrollments.
-    """
-    popular_tracks = await track_service.get_popular_tracks(db, limit=3)
-    if not popular_tracks:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No popular tracks found."
-        )
-    return popular_tracks
