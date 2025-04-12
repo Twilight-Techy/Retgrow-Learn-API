@@ -77,7 +77,7 @@ async def resend_verification(
 
     return schemas.ResendVerificationResponse()
 
-@router.get("/verify")
+@router.post("/verify")
 async def verify_user(
     verification_data: schemas.VerifyUserRequest,
     db: AsyncSession = Depends(get_db_session)
