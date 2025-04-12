@@ -22,6 +22,8 @@ class User(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     username = Column(String(50), unique=True, nullable=False, index=True)
     email = Column(String(255), unique=True, nullable=False, index=True)
+    verification_code = Column(String(255), nullable=True)
+    is_verified = Column(Boolean, default=False, nullable=False)
     password_hash = Column(String(255), nullable=False)
     first_name = Column(String(50), nullable=False)
     last_name = Column(String(50), nullable=False)
@@ -33,7 +35,7 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
     def __repr__(self):
-        return f"<User(id={self.id}, username={self.username}, email={self.email}, role={self.role.value})>"
+        return f"<User(id={self.id}, username={self.username}, email={self.email}, is_verified={self.is_verified} role={self.role.value})>"
     
 class UserLogin(Base):
     __tablename__ = "user_logins"

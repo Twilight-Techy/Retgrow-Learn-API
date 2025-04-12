@@ -1,8 +1,8 @@
 # src/auth/auth_controller.py
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from typing import Annotated
 from src.auth.check_consecutive_logins import check_consecutive_logins
 from src.auth.dependencies import get_current_user
 from src.common.database.database import get_db_session
@@ -58,6 +58,22 @@ async def signup(
             detail="Invalid signup data or user already exists"
         )
     return schemas.SignupResponse(access_token=access_token)
+
+
+@router.get("/verify")
+async def verify_email(
+    verification_code: Annotated[str, Query(description="The verification code from the email link")],
+    db: AsyncSession = Depends(get_db_session)
+):
+    """Verify a user's email using a verification code."""
+    success = await auth_service.verify_user(verification_code, db)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid verification code."
+        )
+    return {"message": "Email verified successfully."}
+
 
 @router.post("/forgot-password", response_model=schemas.ForgotPasswordResponse)
 async def forgot_password(

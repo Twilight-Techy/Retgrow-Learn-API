@@ -1,6 +1,6 @@
 import aiosmtplib
 from email.message import EmailMessage
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 from src.common.config import settings  # Ensure your settings include SMTP_HOST, SMTP_PORT, etc.
 
 async def send_email(subject: str, body: str, recipients: List[str], html_body: Optional[str] = None) -> None:
@@ -30,3 +30,13 @@ async def send_email(subject: str, body: str, recipients: List[str], html_body: 
         password=settings.SMTP_PASSWORD,
         start_tls=True,
     )
+
+async def send_verification_email(recipient_email: str, verification_link: str) -> None:
+    """
+    Sends a verification email to the specified recipient.
+    
+    Args:
+        recipient_email (str): The email address of the recipient.
+        verification_link (str): The link for email verification.
+    """
+    await send_email("Email Verification", f"Please click the following link to verify your email: {verification_link}", [recipient_email])

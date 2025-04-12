@@ -8,8 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from passlib.context import CryptContext
 from jwt.exceptions import DecodeError
 
-from src.common.config import settings
-from src.common.utils.email import send_email
+from src.common.config import settings, settings
+from src.common.utils.email import send_email, send_verification_email
+from src.common.utils.otp import generate_verification_code
 from src.models.models import User, UserLogin
 
 # Initialize the password context (bcrypt)
@@ -56,7 +57,6 @@ async def create_user(user_data: dict, db: AsyncSession):
         password_hash=hash_password(user_data["password"]),
         first_name=user_data["first_name"],
         last_name=user_data["last_name"],
-        role=user_data["role"],
     )
     db.add(new_user)
     await db.commit()
@@ -64,33 +64,32 @@ async def create_user(user_data: dict, db: AsyncSession):
     return new_user
 
 async def signup_user(user_data: dict, db: AsyncSession) -> str:
-    new_user = await create_user(user_data, db)
-    if not new_user:
-        return None
+    """Create a new user and send a verification email."""
+    verification_code = generate_verification_code()
+    user_data["verification_code"] = verification_code
+    user_data["is_verified"] = False
+    user = await create_user(user_data, db)
+    await db.refresh(user)
+
     access_token_expires = timedelta(minutes=settings.JWT_EXPIRATION_MINUTES)
-    access_token = create_access_token(data={"sub": str(new_user.id)}, expires_delta=access_token_expires)
+    access_token = create_access_token(data={"sub": str(user.id)}, expires_delta=access_token_expires)
+    await send_verification_email(user.email, user.first_name, verification_code)
+    return "Verification email sent"
 
-    # Prepare welcome email content.
-    subject = "Welcome to Retgrow Learn!"
-    body = (
-        f"Hi {new_user.first_name},\n\n"
-        "Thank you for signing up for Retgrow Learn. We're excited to have you on board!\n\n"
-        "Best regards,\n"
-        "The Retgrow Learn Team"
-    )
-    html_body = f"""
-    <p>Hi {new_user.first_name},</p>
-    <p>Thank you for signing up for <strong>Retgrow Learn</strong>. We're excited to have you on board!</p>
-    <p>Best regards,<br/>The Retgrow Learn Team</p>
+async def verify_user(verification_code: str, db: AsyncSession):
     """
+    Verify a user's email using the provided verification code.
+    """
+    result = await db.execute(select(User).where(User.verification_code == verification_code))
+    user = result.scalars().first()
 
-    try:
-        await send_email(subject, body, [new_user.email], html_body=html_body)
-    except Exception as e:
-        # Log the error but do not block the sign-up process.
-        print(f"Warning: Failed to send welcome email to {new_user.email}. Error: {e}")
+    if not user:
+        return None
 
-    return access_token
+    user.is_verified = True
+    await db.commit()
+    await db.refresh(user)
+    return user
 
 async def record_login_event(user_id: str, db: AsyncSession):
     login_event = UserLogin(user_id=user_id)

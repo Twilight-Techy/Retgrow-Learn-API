@@ -1,5 +1,6 @@
 import secrets
 import datetime
+import string
 
 def generate_otp(length: int) -> str:
     """
@@ -13,6 +14,20 @@ def generate_otp(length: int) -> str:
     """
     otp = secrets.randbelow(10**length)
     return str(otp).zfill(length)
+
+
+def generate_verification_code(length: int = 6) -> str:
+    """
+    Generates a random alphanumeric verification code of a specified length.
+
+    Args:
+        length (int): The length of the verification code.
+
+    Returns:
+        str: A random alphanumeric verification code.
+    """
+    alphabet = string.ascii_letters + string.digits
+    return ''.join(secrets.choice(alphabet) for _ in range(length))
 
 def get_otp_expiry(hours: int) -> datetime.datetime:
     """
