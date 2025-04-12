@@ -50,10 +50,23 @@ class ForgotPasswordResponse(BaseModel):
 class ResetPasswordRequest(BaseModel):
     token: str
     new_password: Annotated[str, Field(min_length=8)]  # Enforce a minimum length
+    confirm_new_password: Annotated[str, Field(min_length=8)]  # Enforce a minimum length
 
-class ChangePasswordResponse(BaseModel):
-    message: str
-
+    @model_validator(mode="after")
+    def check_passwords_match(cls, values):
+        new = values.new_password
+        confirm = values.confirm_new_password
+        if new != confirm:
+            raise HTTPException(
+                status_code=400,
+                detail="New password and confirmation do not match."
+            )
+        if new == values.current_password:
+            raise HTTPException(
+                status_code=400,
+                detail="New password cannot be the same as the current password."
+            )
+        return values
 class ResetPasswordResponse(BaseModel):
     message: str
 
@@ -80,3 +93,6 @@ class ChangePasswordRequest(BaseModel):
 
     class Config:
         from_attributes = True
+
+class ChangePasswordResponse(BaseModel):
+    message: str
