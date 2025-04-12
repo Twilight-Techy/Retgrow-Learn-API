@@ -30,7 +30,7 @@ async def send_email(subject: str, body: str, recipients: List[str], html_body: 
         password=settings.SMTP_PASSWORD,
         start_tls=True,
     )
-async def send_verification_email(recipient_email: str, first_name:str, verification_code: str) -> None:
+async def send_verification_email(recipient_email: Em, first_name:str, verification_code: str) -> None:
     """
     Sends a verification email to the specified recipient.
     

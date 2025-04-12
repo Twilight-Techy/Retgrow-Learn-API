@@ -1,8 +1,9 @@
 # src/auth/auth_controller.py
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status, Response
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Annotated
+
+from src.auth.schemas import SignupRequest, ResendVerificationRequest
 from src.auth.check_consecutive_logins import check_consecutive_logins
 from src.auth.dependencies import get_current_user
 from src.common.database.database import get_db_session
@@ -39,11 +40,13 @@ async def login(
 
 @router.post("/signup", response_model=schemas.SignupResponse)
 async def signup(
-    signup_data: schemas.SignupRequest,
-    db: AsyncSession = Depends(get_db_session)
+    signup_data: SignupRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db_session),
 ):
     """
-    Register a new user and return an access token.
+
+    Register a new user and return a message.
     
     - **username**: The user's username.
     - **email**: The user's email address.
@@ -51,14 +54,28 @@ async def signup(
     - **first_name**: The user's first name.
     - **last_name**: The user's last name.
     """
-    await auth_service.signup_user(signup_data.model_dump(), db)
-    # if not access_token:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_400_BAD_REQUEST,
-    #         detail="Invalid signup data or user already exists"
-    #     )
+    await auth_service.signup_user(
+        signup_data.model_dump(), db, background_tasks
+    )
+
     return schemas.SignupResponse()
 
+@router.post("/resend-verification")
+async def resend_verification(
+    request: ResendVerificationRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db_session)
+):
+    """
+    Resend a verification email to the user.    
+    - **email**: The user's email address.
+    """
+
+    await auth_service.resend_verification_email(
+        request.email, db, background_tasks
+    )
+
+    return schemas.ResendVerificationResponse()
 
 @router.get("/verify")
 async def verify_user(

@@ -17,12 +17,19 @@ class SignupRequest(BaseModel):
     username: str
     email: EmailStr
     password: str
+    password_confirm: str
     first_name: str
     last_name: str
     role: Optional[UserRole] = UserRole.STUDENT
 
 class SignupResponse(BaseModel):
-    message: str = "Verification email sent successfully."
+    message: str = "User successfully created. Please check your email to verify your account."
+
+class ResendVerificationRequest(BaseModel):
+    email: EmailStr
+
+class ResendVerificationResponse(BaseModel):
+    message: str = "A new verification email has been sent."
 
 class VerifyUserRequest(BaseModel):
     email: EmailStr

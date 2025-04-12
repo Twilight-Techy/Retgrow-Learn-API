@@ -1,7 +1,7 @@
 # src/auth/auth_service.py
 
 from datetime import datetime, timedelta, timezone
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, BackgroundTasks, Depends
 import jwt
 from sqlalchemy import or_
 from sqlalchemy.future import select
@@ -73,22 +73,42 @@ async def create_user(user_data: dict, db: AsyncSession):
     await db.refresh(new_user)
     return new_user
 
-async def signup_user(user_data: dict, db: AsyncSession) -> str:
+async def signup_user(user_data: dict, db: AsyncSession, background_tasks: BackgroundTasks):
     """Create a new user and send a verification email."""
+    if user_data["password"] != user_data["password_confirm"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Passwords do not match"
+        )
+
     new_user = await create_user(user_data, db)
     if not new_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid signup data or user already exists"
         )
-    
-    verification_code = new_user.verification_code
 
-    await send_verification_email(new_user.email, new_user.first_name, verification_code)
+    background_tasks.add_task(send_verification_email, new_user.email, new_user.first_name, new_user.verification_code)
+
+async def resend_verification_email(email: str, db: AsyncSession, background_tasks: BackgroundTasks):
+    """
+    Resend a verification email to the user.
+    """
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User not found.")
+    if user.is_verified:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User is already verified.")
+
+    new_verification_code = generate_verification_code()
+    user.verification_code = new_verification_code
+    await db.commit()
+    await db.refresh(user)
+    background_tasks.add_task(send_verification_email, user.email, user.first_name, new_verification_code)
 
 async def verify_user(verification_data: dict, db: AsyncSession):
-    """
-    Verify a user's email using the provided verification code.
+    """Verify a user's email using the provided verification code.
     """
     result = await db.execute(select(User).where(User.email == verification_data["email"]))
     user = result.scalars().first()
@@ -97,6 +117,12 @@ async def verify_user(verification_data: dict, db: AsyncSession):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="The user does not exist."
+        )
+
+    if user.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is already verified."
         )
 
     if user.verification_code != verification_data["verification_code"]:    
