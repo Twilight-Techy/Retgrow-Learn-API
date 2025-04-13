@@ -34,6 +34,12 @@ async def get_current_user(
             raise credentials_exception
     except DecodeError:
         raise credentials_exception
+    except jwt.ExpiredSignatureError:
+        raise credentials_exception
+    except jwt.InvalidTokenError:
+        raise credentials_exception
+    except Exception as e:
+        raise credentials_exception from e
 
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalars().first()
