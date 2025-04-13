@@ -20,6 +20,24 @@ class CourseResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class CourseCreateRequest(BaseModel):
+    track_id: UUID
+    title: str
+    description: Optional[str] = None
+    image_url: Optional[str] = None
+    level: str
+    duration: Optional[str] = None
+    price: float
+
+class CourseUpdateRequest(BaseModel):
+    track_id: Optional[str] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    image_url: Optional[str] = None
+    level: Optional[str] = None
+    duration: Optional[str] = None
+    price: Optional[float] = None
+
 # For the course content endpoint we assume a course is composed of modules that contain lessons.
 class LessonResponse(BaseModel):
     id: UUID

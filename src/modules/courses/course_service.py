@@ -38,8 +38,42 @@ async def get_all_courses(db: AsyncSession, q: Optional[str] = None, skip: int =
 
 # Retrieve a single course by ID
 async def get_course_by_id(course_id: str, db: AsyncSession) -> Optional[Course]:
-    result = await db.execute(select(Course).where(Course.id == course_id))
+    stmt = select(Course).where(Course.id == course_id)
+    result = await db.execute(stmt)
     course = result.scalars().first()
+    return course
+
+async def create_course(course_data: dict, db: AsyncSession) -> Course:
+    """
+    Create a new course using the provided data.
+    """
+    new_course = Course(
+        track_id=course_data["track_id"],
+        title=course_data["title"],
+        description=course_data["description"],
+        image_url=course_data["image_url"],
+        level=course_data["level"],
+        duration=course_data["duration"],
+        price=course_data["price"]
+    )
+    db.add(new_course)
+    await db.commit()
+    await db.refresh(new_course)
+    return new_course
+
+async def update_course(course_id: str, course_data: dict, db: AsyncSession) -> Optional[Course]:
+    """
+    Update an existing course with the provided data.
+    """
+    course = await get_course_by_id(course_id, db)
+    if not course:
+        return None
+    for key, value in course_data.items():
+        if value is not None:
+            setattr(course, key, value)
+    db.add(course)
+    await db.commit()
+    await db.refresh(course)
     return course
 
 # Retrieve course content: modules and their lessons
