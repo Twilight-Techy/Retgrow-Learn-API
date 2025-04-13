@@ -5,13 +5,15 @@ from typing import List, Optional
 from uuid import UUID
 from pydantic import BaseModel
 
+from src.models.models import CourseLevel
+
 class CourseResponse(BaseModel):
     id: UUID
     track_id: UUID
     title: str
     description: Optional[str] = None
     image_url: Optional[str] = None
-    level: str
+    level: CourseLevel
     duration: Optional[str] = None
     price: float
     created_at: datetime
@@ -25,7 +27,7 @@ class CourseCreateRequest(BaseModel):
     title: str
     description: Optional[str] = None
     image_url: Optional[str] = None
-    level: str
+    level: CourseLevel
     duration: Optional[str] = None
     price: float
 
@@ -34,7 +36,7 @@ class CourseUpdateRequest(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     image_url: Optional[str] = None
-    level: Optional[str] = None
+    level: Optional[CourseLevel] = None
     duration: Optional[str] = None
     price: Optional[float] = None
 
@@ -64,7 +66,7 @@ class CourseDetailResponse(BaseModel):
     title: str
     description: Optional[str] = None
     image_url: Optional[str] = None
-    level: str
+    level: CourseLevel
     duration: Optional[str] = None
     price: float
     modules: List[ModuleResponse] = []

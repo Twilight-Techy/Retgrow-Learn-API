@@ -5,6 +5,8 @@ from typing import List, Optional
 from uuid import UUID
 from pydantic import BaseModel
 
+from src.models.models import CourseLevel
+
 # Reuse CourseResponse from courses if available;
 # otherwise, define a minimal enrolled course schema.
 class EnrolledCourseResponse(BaseModel):
@@ -12,7 +14,7 @@ class EnrolledCourseResponse(BaseModel):
     title: str
     description: str | None = None
     image_url: str | None = None
-    level: str
+    level: CourseLevel
     duration: str | None = None
     price: float
 
@@ -69,7 +71,7 @@ class CourseResponse(BaseModel):
     title: str
     description: Optional[str] = None
     image_url: Optional[str] = None
-    level: str
+    level: CourseLevel
     duration: Optional[str] = None
     price: float
     created_at: datetime
