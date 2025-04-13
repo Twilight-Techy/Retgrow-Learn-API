@@ -11,7 +11,7 @@ class ResourceResponse(BaseModel):
     description: Optional[str] = None
     type: str
     url: str
-    track_id: Optional[str] = None
+    track_id: Optional[UUID] = None
     created_at: datetime
     updated_at: datetime
 
@@ -29,7 +29,7 @@ class ResourceCreateRequest(BaseModel):
     description: Optional[str] = None
     type: str
     url: str
-    track_id: Optional[str] = None
+    track_id: Optional[UUID] = None
 
     class Config:
         from_attributes = True
@@ -39,7 +39,7 @@ class ResourceUpdateRequest(BaseModel):
     description: Optional[str] = None
     type: Optional[str] = None
     url: Optional[str] = None
-    track_id: Optional[str] = None
+    track_id: Optional[UUID] = None
 
     class Config:
         from_attributes = True

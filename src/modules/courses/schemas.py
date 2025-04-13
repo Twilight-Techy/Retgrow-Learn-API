@@ -30,7 +30,7 @@ class CourseCreateRequest(BaseModel):
     price: float
 
 class CourseUpdateRequest(BaseModel):
-    track_id: Optional[str] = None
+    track_id: Optional[UUID] = None
     title: Optional[str] = None
     description: Optional[str] = None
     image_url: Optional[str] = None
