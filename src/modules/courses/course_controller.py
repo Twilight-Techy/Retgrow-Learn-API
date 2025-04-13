@@ -43,7 +43,7 @@ async def get_course(course_id: UUID, db: AsyncSession = Depends(get_db_session)
         )
     return course
 
-@router.post("/courses", response_model=schemas.CourseResponse)
+@router.post("", response_model=schemas.CourseResponse)
 async def create_course(
     course_data: schemas.CourseCreateRequest,
     current_user: User = Depends(get_current_user),
@@ -58,7 +58,7 @@ async def create_course(
         )
     return course
 
-@router.put("/courses/{course_id}", response_model=schemas.CourseResponse)
+@router.put("/{course_id}", response_model=schemas.CourseResponse)
 async def update_course(
     course_id: UUID,
     course_data: schemas.CourseUpdateRequest,
