@@ -1,3 +1,4 @@
+from typing import List
 import uuid
 import enum
 
@@ -66,7 +67,7 @@ class Track(Base):
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
     # Many-to-many relationship with Course via TrackCourse
-    courses: Mapped[list["Course"]] = relationship(
+    courses: Mapped[List["Course"]] = relationship(
         "Course",
         secondary="track_courses",
         back_populates="tracks"
@@ -93,10 +94,15 @@ class Course(Base):
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
     # Many-to-many relationship with Track via TrackCourse
-    tracks: Mapped[list["Track"]] = relationship(
+    tracks: Mapped[List["Track"]] = relationship(
         "Track",
         secondary="track_courses",
         back_populates="courses"
+    )
+    modules: Mapped[List["Module"]] = relationship(
+        "Module",
+        order_by="Module.order",
+        back_populates="course"
     )
 
 
@@ -130,6 +136,12 @@ class Module(Base):
 
     # Relationship: A Module belongs to a Course.
     course: Mapped[Course] = relationship("Course", backref="modules")
+
+    lessons: Mapped[List["Lesson"]] = relationship(
+        "Lesson",
+        order_by="Lesson.order",
+        back_populates="module"
+    )
 
     def __repr__(self):
         return f"<Module(id={self.id}, title={self.title}, order={self.order}, course_id={self.course_id})>"

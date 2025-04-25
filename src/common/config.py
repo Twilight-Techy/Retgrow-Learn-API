@@ -1,4 +1,5 @@
 import os
+from typing import List
 from dotenv import load_dotenv
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
@@ -23,7 +24,7 @@ class Settings(BaseSettings):
     JWT_SECRET: str
     JWT_ALGORITHM: str
     JWT_EXPIRATION_MINUTES: int
-    ALLOWED_ORIGINS: list[str] = ["*"]
+    ALLOWED_ORIGINS: List[str] = ["*"]
     LOG_LEVEL: str = "info"
 
     # Email settings
