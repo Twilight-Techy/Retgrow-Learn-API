@@ -1,7 +1,7 @@
 # src/courses/course_service.py
 
-from datetime import datetime, timezone
-from typing import List, Optional, cast
+from datetime import datetime, timezone 
+from typing import List, Optional
 from sqlalchemy import or_
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -78,7 +78,7 @@ async def update_course(course_id: str, course_data: dict, db: AsyncSession) -> 
     await db.refresh(course)
     return course
 
-# Retrieve course content: modules and their lessons
+
 async def get_course_content(course_id: str, db: AsyncSession) -> Optional[CourseDetailResponse]:
     """
     Retrieve a course with its associated modules and lessons.
@@ -96,7 +96,7 @@ async def get_course_content(course_id: str, db: AsyncSession) -> Optional[Cours
         .options(joinedload(Course.modules).joinedload(Module.lessons))
         .where(Course.id == course_id)
     )
-    course = result.scalars().first()
+    course: Course | None = result.scalars().first()
 
     if not course:
         return None
@@ -116,7 +116,7 @@ async def get_course_content(course_id: str, db: AsyncSession) -> Optional[Cours
             )
         )
     
-    return schemas.CourseDetailResponse.model_validate(course, from_attributes = True, )
+    return schemas.CourseDetailResponse.model_validate({**course.__dict__, 'modules': module_responses})
 
 # Enroll the current user in a course
 async def enroll_in_course(course_id: str, current_user: User, db: AsyncSession) -> bool:
