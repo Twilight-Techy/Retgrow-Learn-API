@@ -9,7 +9,6 @@ from src.models.models import CourseLevel
 
 class CourseResponse(BaseModel):
     id: UUID
-    track_id: UUID
     title: str
     description: Optional[str] = None
     image_url: Optional[str] = None
@@ -23,7 +22,6 @@ class CourseResponse(BaseModel):
         from_attributes = True
 
 class CourseCreateRequest(BaseModel):
-    track_id: UUID
     title: str
     description: Optional[str] = None
     image_url: Optional[str] = None
@@ -32,7 +30,6 @@ class CourseCreateRequest(BaseModel):
     price: float
 
 class CourseUpdateRequest(BaseModel):
-    track_id: Optional[UUID] = None
     title: Optional[str] = None
     description: Optional[str] = None
     image_url: Optional[str] = None
@@ -62,7 +59,6 @@ class ModuleResponse(BaseModel):
 
 class CourseDetailResponse(BaseModel):
     id: UUID
-    track_id: UUID
     title: str
     description: Optional[str] = None
     image_url: Optional[str] = None

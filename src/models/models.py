@@ -65,6 +65,13 @@ class Track(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
+    # Many-to-many relationship with Course via TrackCourse
+    courses: Mapped[list["Course"]] = relationship(
+        "Course",
+        secondary="track_courses",
+        back_populates="tracks"
+    )
+
     def __repr__(self):
         return f"<Track(id={self.id}, title={self.title}, level={self.level.value})>"
 
@@ -76,7 +83,6 @@ class Course(Base):
     __tablename__ = "courses"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
-    track_id = Column(UUID(as_uuid=True), ForeignKey("tracks.id"), nullable=False, index=True)
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     image_url = Column(String(255), nullable=True)
@@ -86,11 +92,16 @@ class Course(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
-    # Relationship: A Course belongs to a Track.
-    track: Mapped[Track] = relationship("Track", backref="courses")
+    # Many-to-many relationship with Track via TrackCourse
+    tracks: Mapped[list["Track"]] = relationship(
+        "Track",
+        secondary="track_courses",
+        back_populates="courses"
+    )
+
 
     def __repr__(self):
-        return f"<Course(id={self.id}, title={self.title}, track_id={self.track_id})>"
+        return f"<Course(id={self.id}, title={self.title}>"
     
 class TrackCourse(Base):
     __tablename__ = "track_courses"
@@ -101,8 +112,8 @@ class TrackCourse(Base):
     order = Column(Integer, nullable=False)
 
     # Define relationships (assuming your Course and Track models exist).
-    course: Mapped[Course] = relationship("Course", backref="track_associations")
     track: Mapped[Track] = relationship("Track", backref="course_associations")
+    course: Mapped[Course] = relationship("Course", backref="track_associations")
 
     def __repr__(self):
         return f"<TrackCourse(track_id={self.track_id}, course_id={self.course_id}, order={self.order})>"

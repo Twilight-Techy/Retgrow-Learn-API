@@ -51,7 +51,6 @@ async def create_course(course_data: dict, db: AsyncSession) -> Course:
     Create a new course using the provided data.
     """
     new_course = Course(
-        track_id=course_data["track_id"],
         title=course_data["title"],
         description=course_data["description"],
         image_url=course_data["image_url"],
