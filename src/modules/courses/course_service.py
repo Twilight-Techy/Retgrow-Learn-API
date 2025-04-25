@@ -1,10 +1,13 @@
 # src/courses/course_service.py
 
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import List, Optional, cast
 from sqlalchemy import or_
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
+from src.modules.courses.schemas import CourseDetailResponse, ModuleResponse, LessonResponse
+from src.modules.courses import schemas
 from src.models.models import Course, Module, Lesson, UserCourse, User
 from src.modules.notifications.notification_service import create_notification
 
@@ -77,18 +80,44 @@ async def update_course(course_id: str, course_data: dict, db: AsyncSession) -> 
     return course
 
 # Retrieve course content: modules and their lessons
-async def get_course_content(course_id: str, db: AsyncSession) -> Optional[Course]:
-    # First, retrieve the course
-    result = await db.execute(select(Course).where(Course.id == course_id))
+async def get_course_content(course_id: str, db: AsyncSession) -> Optional[CourseDetailResponse]:
+    """
+    Retrieve a course with its associated modules and lessons.
+
+    Args:
+        course_id: The ID of the course to retrieve.
+        db: The database session.
+
+    Returns:
+        A CourseDetailResponse object or None if the course is not found.
+    """
+    # Eagerly load modules and lessons
+    result = await db.execute(
+        select(Course)
+        .options(joinedload(Course.modules).joinedload(Module.lessons))
+        .where(Course.id == course_id)
+    )
     course = result.scalars().first()
+
     if not course:
         return None
 
-    # Eagerly load modules and lessons (assuming relationships are set up)
-    # If lazy-loading is configured appropriately, accessing course.modules and lesson collections is enough.
-    # Otherwise, you might consider using joined loading (not shown here for brevity).
-    # For each module, the lessons should already be available via the relationship (e.g. module.lessons).
-    return course
+    # Manually construct the response
+    module_responses: List[ModuleResponse] = []
+    for module in course.modules:
+        lesson_responses: List[LessonResponse] = [
+            LessonResponse.model_validate(lesson) for lesson in module.lessons
+        ]
+        module_responses.append(
+            ModuleResponse(
+                id=module.id,
+                title=module.title,
+                order=module.order,
+                lessons=lesson_responses
+            )
+        )
+    
+    return schemas.CourseDetailResponse.model_validate(course, from_attributes = True, )
 
 # Enroll the current user in a course
 async def enroll_in_course(course_id: str, current_user: User, db: AsyncSession) -> bool:
