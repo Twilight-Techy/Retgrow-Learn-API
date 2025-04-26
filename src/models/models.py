@@ -135,7 +135,7 @@ class Module(Base):
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
     # Relationship: A Module belongs to a Course.
-    course: Mapped[Course] = relationship("Course", backref="modules")
+    course: Mapped[Course] = relationship("Course", backref="back_populates")
 
     lessons: Mapped[List["Lesson"]] = relationship(
         "Lesson",
@@ -159,7 +159,7 @@ class Lesson(Base):
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
     # Relationship: A Lesson belongs to a Module.
-    module: Mapped[Module] = relationship("Module", backref="lessons")
+    module: Mapped[Module] = relationship("Module", back_populates="lessons")
 
     def __repr__(self):
         return f"<Lesson(id={self.id}, title={self.title}, order={self.order}, module_id={self.module_id})>"
