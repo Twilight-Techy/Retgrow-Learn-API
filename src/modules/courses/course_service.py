@@ -76,8 +76,6 @@ async def delete_course(course_id: str, db: AsyncSession) -> Course:
     except IntegrityError:
         raise ValueError("Course is associated with other records and cannot be deleted.")
     await db.commit()
-    await db.refresh(new_course)
-    return new_course
 
 async def update_course(course_id: str, course_data: dict, db: AsyncSession) -> Optional[Course]:
     """
