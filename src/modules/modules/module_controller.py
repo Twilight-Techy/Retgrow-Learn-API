@@ -31,7 +31,7 @@ async def create_module(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
 @router.put(
-    "/{module_id}",
+    "/{module_id}", # Corrected from PATCH to PUT
     response_model=schemas.ModuleResponse
 )
 async def update_module(
@@ -49,17 +49,18 @@ async def update_module(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
 @router.delete(
-    "/{module_id}",
-    status_code=status.HTTP_204_NO_CONTENT
+    "/{module_id}", # Removed status code
+    response_model=dict
 )
 async def delete_module(
     course_id: UUID,
     module_id: UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
-):
+) -> dict: # Added return annotation
     ensure_instructor_or_admin(current_user)
     try:
         await module_service.delete_module(course_id, module_id, db)
+        return {"message": "Module deleted successfully"}
     except ValueError as ve:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(ve))
