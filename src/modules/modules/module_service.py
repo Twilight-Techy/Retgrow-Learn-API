@@ -1,10 +1,9 @@
-from uuid import UUID
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from src.models.models import Course, Module
 
-async def create_module(course_id: UUID, data: dict, db: AsyncSession) -> Module:
+async def create_module(course_id: str, data: dict, db: AsyncSession) -> Module:
     # 1) Verify course exists
     result = await db.execute(select(Course).where(Course.id == course_id))
     course = result.scalars().first()
@@ -22,7 +21,7 @@ async def create_module(course_id: UUID, data: dict, db: AsyncSession) -> Module
         raise ValueError("Failed to create module (possible duplicate order)")
     return new_module
 
-async def update_module(course_id: UUID, module_id: UUID, data: dict, db: AsyncSession) -> Module:
+async def update_module(course_id: str, module_id: str, data: dict, db: AsyncSession) -> Module:
     # 1) Load module and ensure it belongs to the course
     result = await db.execute(
         select(Module).where(Module.id == module_id, Module.course_id == course_id)
@@ -46,7 +45,7 @@ async def update_module(course_id: UUID, module_id: UUID, data: dict, db: AsyncS
         raise ValueError("Failed to update module (possible order conflict)")
     return module
 
-async def delete_module(course_id: UUID, module_id: UUID, db: AsyncSession) -> None:
+async def delete_module(course_id: str, module_id: str, db: AsyncSession) -> None:
     # 1) Load module
     result = await db.execute(
         select(Module).where(Module.id == module_id, Module.course_id == course_id)
