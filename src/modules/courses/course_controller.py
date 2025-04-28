@@ -43,7 +43,7 @@ async def get_course(course_id: UUID, db: AsyncSession = Depends(get_db_session)
         )
     return course
 
-@router.post("", response_model=schemas.CourseResponse)
+@router.post("", response_model=schemas.CourseResponse, status_code=status.HTTP_201_CREATED)
 async def create_course(
     course_data: schemas.CourseCreateRequest,
     current_user: User = Depends(get_current_user),

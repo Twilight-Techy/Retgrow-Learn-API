@@ -4,7 +4,7 @@ import enum
 
 from sqlalchemy import (
     ARRAY, JSON, Boolean, Column, Float, ForeignKey, Integer, Numeric, String, Text, DateTime,
-    Enum as SAEnum,
+    Enum as SAEnum, UniqueConstraint,
     func,
 )
 from sqlalchemy.dialects.postgresql import UUID
@@ -127,6 +127,10 @@ class TrackCourse(Base):
 class Module(Base):
     __tablename__ = "modules"
 
+    __table_args__ = (
+        UniqueConstraint('course_id', 'order', name='unique_course_module_order'),
+    )
+
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     course_id = Column(UUID(as_uuid=True), ForeignKey("courses.id"), nullable=False, index=True)
     title = Column(String(255), nullable=False)
@@ -148,6 +152,10 @@ class Module(Base):
 
 class Lesson(Base):
     __tablename__ = "lessons"
+
+    __table_args__ = (
+        UniqueConstraint('module_id', 'order', name='unique_module_lesson_order'),
+    )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     module_id = Column(UUID(as_uuid=True), ForeignKey("modules.id"), nullable=False, index=True)

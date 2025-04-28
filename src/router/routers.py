@@ -11,6 +11,7 @@ from src.modules.discussions.discussion_controller import router as discussion_r
 from src.modules.leaderboard.leaderboard_controller import router as leaderboard_router
 from src.modules.learning_path.learning_path_controller import router as learning_path_router
 from src.modules.lessons.lesson_controller import router as lesson_router
+from src.modules.modules.module_controller import router as module_router
 from src.modules.notifications.notification_controller import router as notification_router
 from src.modules.quizzes.quiz_controller import router as quiz_router
 from src.modules.resources.resource_controller import router as resource_router
@@ -29,6 +30,7 @@ def include_routers(app: FastAPI) -> None:
     app.include_router(leaderboard_router)
     app.include_router(learning_path_router)
     app.include_router(lesson_router)
+    app.include_router(module_router)
     app.include_router(notification_router)
     app.include_router(quiz_router)
     app.include_router(resource_router)

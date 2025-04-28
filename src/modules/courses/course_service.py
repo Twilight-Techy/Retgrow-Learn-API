@@ -5,6 +5,7 @@ from typing import List, Optional
 from sqlalchemy import or_
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 from src.models.models import Course, Module, UserCourse, User
 from src.modules.notifications.notification_service import create_notification
