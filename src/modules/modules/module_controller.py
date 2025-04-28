@@ -21,7 +21,6 @@ async def create_module(
     course_id: UUID,
     module_data: schemas.ModuleCreateRequest,
     current_user: User = Depends(get_current_user),
-    _: None = Depends(ensure_instructor_or_admin),
     db: AsyncSession = Depends(get_db_session)
 ):
     ensure_instructor_or_admin(current_user)
@@ -31,7 +30,7 @@ async def create_module(
     except ValueError as ve:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(ve))
 
-@router.patch(
+@router.put(
     "/{module_id}",
     response_model=schemas.ModuleResponse
 )
@@ -40,7 +39,6 @@ async def update_module(
     module_id: UUID,
     module_data: schemas.ModuleUpdateRequest,
     current_user: User = Depends(get_current_user),
-    _: None = Depends(ensure_instructor_or_admin),
     db: AsyncSession = Depends(get_db_session)
 ):
     ensure_instructor_or_admin(current_user)
@@ -58,7 +56,6 @@ async def delete_module(
     course_id: UUID,
     module_id: UUID,
     current_user: User = Depends(get_current_user),
-    _: None = Depends(ensure_instructor_or_admin),
     db: AsyncSession = Depends(get_db_session)
 ):
     ensure_instructor_or_admin(current_user)
