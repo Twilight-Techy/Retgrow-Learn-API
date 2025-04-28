@@ -44,7 +44,7 @@ async def get_course(course_id: UUID, db: AsyncSession = Depends(get_db_session)
     return course
 
 @router.post("", response_model=schemas.CourseResponse, status_code=status.HTTP_201_CREATED)
-async def create_course(
+async def create_course(   
     course_data: schemas.CourseCreateRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
@@ -73,6 +73,20 @@ async def update_course(
             detail="Course not found."
         )
     return updated_course
+
+@router.delete("/{course_id}", response_model=dict)
+async def delete_course(
+    course_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session)
+):
+    ensure_instructor_or_admin(current_user)
+    try:
+        await course_service.delete_course(course_id, db)
+        return {"message": "Course deleted successfully"}
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(ve))
+    
 
 # GET /courses/{course_id}/content - Retrieve detailed course content
 @router.get("/{course_id}/content", response_model=schemas.CourseDetailResponse)

@@ -5,7 +5,7 @@ from typing import List, Optional
 from sqlalchemy import or_
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import selectinload
 from src.models.models import Course, Module, UserCourse, User
 from src.modules.notifications.notification_service import create_notification
@@ -58,6 +58,23 @@ async def create_course(course_data: dict, db: AsyncSession) -> Course:
         price=course_data["price"]
     )
     db.add(new_course)
+    await db.commit()
+    await db.refresh(new_course)
+    return new_course
+
+async def delete_course(course_id: str, db: AsyncSession) -> Course:
+    """
+    Delete a course by its ID.
+    """
+    course = await get_course_by_id(course_id, db)
+    if not course:
+        raise ValueError("Course not found")
+    try:
+        await db.delete(course)
+    except NoResultFound:
+        raise ValueError("Course not found")
+    except IntegrityError:
+        raise ValueError("Course is associated with other records and cannot be deleted.")
     await db.commit()
     await db.refresh(new_course)
     return new_course
