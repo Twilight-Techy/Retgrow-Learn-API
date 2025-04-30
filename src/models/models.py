@@ -334,8 +334,8 @@ class UserAchievement(Base):
     earned_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     # Relationships: A UserAchievement links a User and an Achievement.
-    user: Mapped[User] = relationship("User", backref="user_achievements")
-    achievement: Mapped[Achievement] = relationship("Achievement", backref="user_achievements")
+    user: Mapped[User] = relationship("User", backref="user_achievements", cascade="all, delete-orphan")
+    achievement: Mapped[Achievement] = relationship("Achievement", backref="user_achievements", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<UserAchievement(id={self.id}, user_id={self.user_id}, achievement_id={self.achievement_id}, earned_at={self.earned_at})>"
