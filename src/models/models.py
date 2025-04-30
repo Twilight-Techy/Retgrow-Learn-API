@@ -103,7 +103,7 @@ class Course(Base):
     modules: Mapped[List["Module"]] = relationship(
         "Module",        
         order_by="Module.order",
-        back_populates="course",
+        backref="course",
 
         cascade="all, delete-orphan",
     )
@@ -143,7 +143,7 @@ class Module(Base):
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
     # Relationship: A Module belongs to a Course.
-    course: Mapped[Course] = relationship("Course", backref="modules")
+    course: Mapped[Course] = relationship("Course", backref="modules", cascade="all, delete-orphan")
 
     lessons: Mapped[List["Lesson"]] = relationship(
         "Lesson",
@@ -172,7 +172,7 @@ class Lesson(Base):
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
     # Relationship: A Lesson belongs to a Module.
-    module: Mapped[Module] = relationship("Module", backref="lessons", cascade="all, delete-orphan")
+    module: Mapped[Module] = relationship("Module", backref="lessons")
 
     def __repr__(self):
         return f"<Lesson(id={self.id}, title={self.title}, order={self.order}, module_id={self.module_id})>"
@@ -188,8 +188,8 @@ class UserCourse(Base):
     completed_at = Column(DateTime(timezone=True), nullable=True)
 
     # Relationships to the User and Course models.
-    user: Mapped[User] = relationship("User", backref="user_courses")
-    course: Mapped[Course] = relationship("Course", backref="user_courses")
+    user: Mapped[User] = relationship("User", backref="user_courses", cascade="all, delete-orphan")
+    course: Mapped[Course] = relationship("Course", backref="user_courses", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<UserCourse(id={self.id}, user_id={self.user_id}, course_id={self.course_id}, progress={self.progress})>"
@@ -221,7 +221,7 @@ class Quiz(Base):
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
     # Relationship: A Quiz belongs to a Course.
-    course: Mapped[Course] = relationship("Course", backref="quizzes", cascade="all, delete-orphan")
+    course: Mapped[Course] = relationship("Course", backref="quizzes")
 
     def __repr__(self):
         return f"<Quiz(id={self.id}, title={self.title}, course_id={self.course_id})>"
@@ -334,8 +334,8 @@ class UserAchievement(Base):
     earned_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     # Relationships: A UserAchievement links a User and an Achievement.
-    user: Mapped[User] = relationship("User", backref="user_achievements", cascade="all, delete-orphan")
-    achievement: Mapped[Achievement] = relationship("Achievement", backref="user_achievements", cascade="all, delete-orphan")
+    user: Mapped[User] = relationship("User", backref="user_achievements")
+    achievement: Mapped[Achievement] = relationship("Achievement", backref="user_achievements")
 
     def __repr__(self):
         return f"<UserAchievement(id={self.id}, user_id={self.user_id}, achievement_id={self.achievement_id}, earned_at={self.earned_at})>"
@@ -374,8 +374,8 @@ class Discussion(Base):
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
     # Relationships: A Discussion is created by a User for a specific Course.
-    course: Mapped[Course] = relationship("Course", backref="discussions", cascade="all, delete-orphan")
-    user: Mapped[User] = relationship("User", backref="discussions", cascade="all, delete-orphan")
+    course: Mapped[Course] = relationship("Course", backref="discussions")
+    user: Mapped[User] = relationship("User", backref="discussions")
 
     def __repr__(self):
         return f"<Discussion(id={self.id}, title={self.title}, course_id={self.course_id}, user_id={self.user_id})>"
@@ -422,7 +422,7 @@ class LearningPath(Base):
     track: Mapped[Track] = relationship("Track", backref="learning_paths", cascade="all, delete-orphan")
 
     # The current course the user is taking.
-    current_course: Mapped[Course] = relationship("Course", backref="learning_paths")
+    current_course: Mapped[Course] = relationship("Course", backref="learning_paths", cascade="all, delete-orphan")
 
     def __repr__(self):
         return (f"<LearningPath(id={self.id}, user_id={self.user_id}, "
@@ -480,8 +480,7 @@ class Deadline(Base):
                         server_default=func.now(), onupdate=func.now())
 
     # Establish a relationship to the Course model (if deadlines are linked to courses)
-    course: Mapped[Course] = relationship("Course", backref="deadlines",
-                                          cascade="all, delete-orphan")
+    course: Mapped[Course] = relationship("Course", backref="deadlines")
 
     def __repr__(self):
         return f"<Deadline(id={self.id}, title={self.title}, due_date={self.due_date})>"
