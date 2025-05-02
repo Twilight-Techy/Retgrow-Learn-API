@@ -114,8 +114,8 @@ class TrackCourse(Base):
     order = Column(Integer, nullable=False)
 
     # Define relationships to Track and Course models
-    track: Mapped[Track] = relationship("Track", backref=backref("course_associations"))
-    course: Mapped[Course] = relationship("Course", backref=backref("track_associations"))
+    track: Mapped[Track] = relationship("Track", backref=backref("course_associations", cascade="all, delete-orphan"))
+    course: Mapped[Course] = relationship("Course", backref=backref("track_associations", cascade="all, delete-orphan"))
     
     def __repr__(self):
         return f"<TrackCourse(track_id={self.track_id}, course_id={self.course_id}, order={self.order})>"
@@ -257,8 +257,8 @@ class CourseQuiz(Base):
     order = Column(Integer, nullable=False)
 
     # Relationships
-    quiz: Mapped[Quiz] = relationship("Quiz", backref=backref("course_associations"))
-    course: Mapped[Course] = relationship("Course", backref=backref("quiz_associations"))
+    quiz: Mapped[Quiz] = relationship("Quiz", backref=backref("course_associations", cascade="all, delete-orphan"))
+    course: Mapped[Course] = relationship("Course", backref=backref("quiz_associations", cascade="all, delete-orphan"))
 
     def __repr__(self):
         return f"<CourseQuiz(course_id={self.course_id}, quiz_id={self.quiz_id}, order={self.order})>"
@@ -412,7 +412,7 @@ class LearningPath(Base):
     # Relationships
     user: Mapped[User] = relationship("User", backref=backref("learning_path", uselist=False, cascade="all, delete-orphan"))
     track: Mapped[Track] = relationship("Track", backref=backref("learning_paths", cascade="all, delete-orphan"))
-    current_course: Mapped[Course] = relationship("Course", backref=backref("learning_paths", cascade="all, delete-orphan"))
+    current_course: Mapped[Course] = relationship("Course", backref=backref("learning_paths"))
 
     def __repr__(self):
         return (f"<LearningPath(id={self.id}, user_id={self.user_id}, "
@@ -458,7 +458,7 @@ class Deadline(Base):
                         server_default=func.now(), onupdate=func.now())
 
     # Establish a relationship to the Course model (if deadlines are linked to courses)
-    course: Mapped[Course] = relationship("Course", backref="deadlines")
+    course: Mapped[Course] = relationship("Course", backref=backref("deadlines", cascade="all, delete-orphan"))
 
     def __repr__(self):
         return f"<Deadline(id={self.id}, title={self.title}, due_date={self.due_date})>"
