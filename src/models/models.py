@@ -176,7 +176,7 @@ class UserCourse(Base):
 
     # Relationships to the User and Course models
     user: Mapped[User] = relationship("User", backref=backref("user_courses", cascade="all, delete-orphan"))
-    course: Mapped[Course] = relationship("Course", backref=backref("user_courses"))
+    course: Mapped[Course] = relationship("Course", backref=backref("user_courses", cascade="all, delete-orphan"))
 
     def __repr__(self):
         return f"<UserCourse(id={self.id}, user_id={self.user_id}, course_id={self.course_id}, progress={self.progress})>"
