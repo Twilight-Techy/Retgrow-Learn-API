@@ -191,7 +191,7 @@ class UserLesson(Base):
 
     # Relationships to the User and Lesson models
     user: Mapped[User] = relationship("User", backref=backref("user_lessons", cascade="all, delete-orphan"))
-    lesson: Mapped[Lesson] = relationship("Lesson", backref=backref("user_lessons"))
+    lesson: Mapped[Lesson] = relationship("Lesson", backref=backref("user_lessons", cascade="all, delete-orphan"))
 
     def __repr__(self):
         return f"<UserLesson(id={self.id}, user_id={self.user_id}, lesson_id={self.lesson_id}, completed_at={self.completed_at})>"
@@ -244,7 +244,7 @@ class UserQuiz(Base):
 
     # Relationships: A UserQuiz links a User and a Quiz
     user: Mapped[User] = relationship("User", backref=backref("user_quizzes", cascade="all, delete-orphan"))
-    quiz: Mapped[Quiz] = relationship("Quiz", backref=backref("user_quizzes"))
+    quiz: Mapped[Quiz] = relationship("Quiz", backref=backref("user_quizzes", cascade="all, delete-orphan"))
 
     def __repr__(self):
         return f"<UserQuiz(id={self.id}, user_id={self.user_id}, quiz_id={self.quiz_id}, score={self.score})>"
@@ -297,7 +297,7 @@ class UserResource(Base):
 
     # Relationships to the User and Resource models
     user: Mapped[User] = relationship("User", backref=backref("user_resources", cascade="all, delete-orphan"))
-    resource: Mapped[Resource] = relationship("Resource", backref=backref("user_resources"))
+    resource: Mapped[Resource] = relationship("Resource", backref=backref("user_resources", cascade="all, delete-orphan"))
 
     def __repr__(self):
         return f"<UserResource(id={self.id}, user_id={self.user_id}, resource_id={self.resource_id}, last_accessed={self.last_accessed})>"
@@ -326,7 +326,7 @@ class UserAchievement(Base):
 
     # Relationships: A UserAchievement links a User and an Achievement
     user: Mapped[User] = relationship("User", backref=backref("user_achievements", cascade="all, delete-orphan"))
-    achievement: Mapped[Achievement] = relationship("Achievement", backref=backref("user_achievements"))
+    achievement: Mapped[Achievement] = relationship("Achievement", backref=backref("user_achievements", cascade="all, delete-orphan"))
 
     def __repr__(self):
         return f"<UserAchievement(id={self.id}, user_id={self.user_id}, achievement_id={self.achievement_id}, earned_at={self.earned_at})>"
@@ -365,8 +365,8 @@ class Discussion(Base):
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
     # Relationships: A Discussion is created by a User for a specific Course
-    course: Mapped[Course] = relationship("Course", backref="discussions")
-    user: Mapped[User] = relationship("User", backref="discussions")
+    course: Mapped[Course] = relationship("Course", backref=backref("discussions", cascade="all, delete-orphan"))
+    user: Mapped[User] = relationship("User", backref=backref("discussions", cascade="all, delete-orphan"))
     
     # DiscussionReply relationship (Discussion is parent)
     discussion_replies = relationship(
@@ -390,7 +390,7 @@ class DiscussionReply(Base):
                         server_default=func.now(), onupdate=func.now())
 
     # Relationship: A DiscussionReply is created by a User
-    user: Mapped[User] = relationship("User", backref="discussion_replies")
+    user: Mapped[User] = relationship("User", backref=backref("discussion_replies", cascade="all, delete-orphan"))
 
     def __repr__(self):
         return (f"<DiscussionReply(id={self.id}, discussion_id={self.discussion_id}, "
@@ -410,9 +410,9 @@ class LearningPath(Base):
                         server_default=func.now(), onupdate=func.now())
 
     # Relationships
-    user: Mapped[User] = relationship("User", backref=backref("learning_path", uselist=False))
-    track: Mapped[Track] = relationship("Track", backref="learning_paths")
-    current_course: Mapped[Course] = relationship("Course", backref="learning_paths")
+    user: Mapped[User] = relationship("User", backref=backref("learning_path", uselist=False, cascade="all, delete-orphan"))
+    track: Mapped[Track] = relationship("Track", backref=backref("learning_paths", cascade="all, delete-orphan"))
+    current_course: Mapped[Course] = relationship("Course", backref=backref("learning_paths", cascade="all, delete-orphan"))
 
     def __repr__(self):
         return (f"<LearningPath(id={self.id}, user_id={self.user_id}, "
@@ -439,7 +439,7 @@ class UserSkill(Base):
 
     # Relationships: A UserSkill links a User and a Skill
     user: Mapped[User] = relationship("User", backref=backref("user_skills", cascade="all, delete-orphan"))
-    skill: Mapped[Skill] = relationship("Skill", backref=backref("user_skills"))
+    skill: Mapped[Skill] = relationship("Skill", backref=backref("user_skills", cascade="all, delete-orphan"))
 
     def __repr__(self):
         return (f"<UserSkill(id={self.id}, user_id={self.user_id}, skill_id={self.skill_id}, "
