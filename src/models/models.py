@@ -148,7 +148,7 @@ class Module(Base):
     lessons: Mapped[List["Lesson"]] = relationship(
         "Lesson",
         order_by="Lesson.order",
-        back_populates="module",
+        backref="module",
         cascade="all, delete-orphan"
     )
 
