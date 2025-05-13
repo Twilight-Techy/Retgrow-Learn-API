@@ -52,10 +52,29 @@ class LessonCreateSchema(BaseModel):
     class Config:
         from_attributes = True
 
+class LessonUpdateSchema(BaseModel):
+    id: UUID  # Required to identify which lesson to update
+    title: Optional[str] = None
+    content: Optional[str] = None
+    video_url: Optional[str] = None
+    order: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
 class ModuleCreateSchema(BaseModel):
     title: str
     order: int
     lessons: List[LessonCreateSchema] = []
+
+    class Config:
+        from_attributes = True
+
+class ModuleUpdateSchema(BaseModel):
+    id: UUID  # Required to identify which module to update
+    title: Optional[str] = None
+    order: Optional[int] = None
+    lessons: Optional[List[LessonUpdateSchema]] = None
 
     class Config:
         from_attributes = True
@@ -66,6 +85,14 @@ class CourseCreateWithContentRequest(CourseCreateRequest):
     Inherits from CourseCreateRequest and adds a list of modules.
     """
     modules: List[ModuleCreateSchema] = []
+
+class CourseUpdateWithContentRequest(CourseUpdateRequest):
+    """
+    Schema for updating a course with its modules and lessons.
+    Inherits from CourseUpdateRequest and adds a list of modules.
+    Modules can be added, updated, or removed based on presence/absence in the list.
+    """
+    modules: Optional[List[ModuleUpdateSchema]] = None
 
 # For the course content endpoint we assume a course is composed of modules that contain lessons.
 class LessonResponse(BaseModel):

@@ -88,7 +88,23 @@ async def create_course_with_content(
             detail="Failed to create course with content."
         )
     return schemas.CourseDetailResponse.model_validate(course)
-    
+
+@router.put("/{course_id}/with_content", response_model=schemas.CourseDetailResponse)
+async def update_course_with_content(
+    course_id: UUID,
+    course_data: schemas.CourseUpdateWithContentRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session)
+):
+    ensure_instructor_or_admin(current_user)
+    updated_course = await course_service.update_course_with_content(course_id, course_data.model_dump(), db)
+    if not updated_course:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Course not found."
+        )
+    return schemas.CourseDetailResponse.model_validate(updated_course)
+
 @router.delete("/{course_id}", response_model=dict)
 async def delete_course(
     course_id: UUID,

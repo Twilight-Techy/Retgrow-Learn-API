@@ -127,6 +127,129 @@ async def update_course(course_id: str, course_data: dict, db: AsyncSession) -> 
     await db.refresh(course)
     return course
 
+async def update_course_with_content(course_id: str, course_data: dict, db: AsyncSession) -> Optional[Course]:
+    """
+    Update a course along with its modules and lessons.
+    This implementation:
+    1. Updates course metadata
+    2. Compares existing modules/lessons with new data
+    3. Only updates/deletes content that has actually changed
+    4. Resets progress only for modified modules
+    """
+    course = await get_course_by_id(course_id, db)
+    if not course:
+        return None
+
+    # Update course fields
+    for key, value in course_data.items():
+        if key != "modules" and value is not None:
+            setattr(course, key, value)
+
+    if "modules" in course_data:
+        existing_modules = {module.order: module for module in course.modules}
+        modified_module_ids = set()  # Track which modules have changed
+
+        for module_data in course_data.get("modules", []):
+            module_order = module_data.get("order")
+            if not module_order:
+                continue
+
+            existing_module = existing_modules.get(module_order)
+            module_changed = False
+
+            if existing_module:
+                # Check if module has changed
+                if (existing_module.title != module_data["title"]):
+                    module_changed = True
+                    existing_module.title = module_data["title"]
+
+                # Compare lessons
+                if "lessons" in module_data:
+                    existing_lessons = {lesson.order: lesson for lesson in existing_module.lessons}
+                    
+                    for lesson_data in module_data.get("lessons", []):
+                        lesson_order = lesson_data.get("order")
+                        if not lesson_order:
+                            continue
+
+                        existing_lesson = existing_lessons.get(lesson_order)
+                        
+                        if existing_lesson:
+                            # Check if lesson content has changed
+                            if (existing_lesson.title != lesson_data["title"] or
+                                existing_lesson.content != lesson_data.get("content") or
+                                existing_lesson.video_url != lesson_data.get("video_url")):
+                                module_changed = True
+                                existing_lesson.title = lesson_data["title"]
+                                existing_lesson.content = lesson_data.get("content")
+                                existing_lesson.video_url = lesson_data.get("video_url")
+                        else:
+                            # New lesson added
+                            module_changed = True
+                            new_lesson = Lesson(
+                                title=lesson_data["title"],
+                                content=lesson_data.get("content"),
+                                video_url=lesson_data.get("video_url"),
+                                order=lesson_order,
+                                module=existing_module
+                            )
+                            db.add(new_lesson)
+                    
+                    # Check for deleted lessons
+                    new_lesson_orders = {l.get("order") for l in module_data.get("lessons", [])}
+                    if any(order not in new_lesson_orders for order in existing_lessons.keys()):
+                        module_changed = True
+                        for lesson in existing_module.lessons:
+                            if lesson.order not in new_lesson_orders:
+                                await db.delete(lesson)
+
+                if module_changed:
+                    modified_module_ids.add(str(existing_module.id))
+            else:
+                # Create new module with lessons
+                new_module = Module(
+                    title=module_data["title"],
+                    order=module_order,
+                    course=course
+                )
+                db.add(new_module)
+                
+                for lesson_data in module_data.get("lessons", []):
+                    new_lesson = Lesson(
+                        title=lesson_data["title"],
+                        content=lesson_data.get("content"),
+                        video_url=lesson_data.get("video_url"),
+                        order=lesson_data["order"],
+                        module=new_module
+                    )
+                    db.add(new_lesson)
+                modified_module_ids.add(str(new_module.id))
+
+        # Check for deleted modules
+        new_module_orders = {m.get("order") for m in course_data.get("modules", [])}
+        for order, module in existing_modules.items():
+            if order not in new_module_orders:
+                modified_module_ids.add(str(module.id))
+                await db.delete(module)        # Notify users about content changes if any modules were modified
+        if modified_module_ids:
+            # Get all enrollments for this course
+            enrollments = await db.execute(
+                select(UserCourse)
+                .where(UserCourse.course_id == course_id)
+            )
+            for enrollment in enrollments.scalars():
+                # Notify user about course changes but keep their progress
+                await create_notification(
+                    enrollment.user_id,
+                    "Course Content Updated",
+                    f"Some content in this course has been updated. Your progress has been preserved, but you may want to review the updated sections.",
+                    db
+                )
+
+    await db.commit()
+    await db.refresh(course)
+    return course
+
 
 # Retrieve course content: modules and their lessons
 async def get_course_content(course_id: str, db: AsyncSession) -> Optional[Course]:
