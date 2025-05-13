@@ -7,7 +7,7 @@ from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import selectinload
-from src.models.models import Course, Module, UserCourse, User
+from src.models.models import Course, Lesson, Module, UserCourse, User
 from src.modules.notifications.notification_service import create_notification
 
 # Retrieve all courses
@@ -68,11 +68,11 @@ async def create_course_with_content(course_data: dict, db: AsyncSession) -> Cou
     """
     new_course = Course(
         title=course_data["title"],
-        description=course_data.get("description"),
-        image_url=course_data.get("image_url"),
+        description=course_data["description"],
+        image_url=course_data["image_url"],
         level=course_data["level"],
-        duration=course_data.get("duration"),
-        price=course_data.get("price")
+        duration=course_data["duration"],
+        price=course_data["price"]
     )
     db.add(new_course)
 
