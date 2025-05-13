@@ -29,6 +29,9 @@ class CourseCreateRequest(BaseModel):
     duration: Optional[str] = None
     price: float
 
+    class Config:
+        from_attributes = True
+
 class CourseUpdateRequest(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
@@ -37,16 +40,25 @@ class CourseUpdateRequest(BaseModel):
     duration: Optional[str] = None
     price: Optional[float] = None
 
+    class Config:
+        from_attributes = True
+
 class LessonCreateSchema(BaseModel):
     title: str
     content: Optional[str] = None
     video_url: Optional[str] = None
     order: int
 
+    class Config:
+        from_attributes = True
+
 class ModuleCreateSchema(BaseModel):
     title: str
     order: int
     lessons: List[LessonCreateSchema] = []
+
+    class Config:
+        from_attributes = True
 
 class CourseCreateWithContentRequest(CourseCreateRequest):
     """
