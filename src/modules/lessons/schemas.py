@@ -20,3 +20,21 @@ class LessonResponse(BaseModel):
 
 class CompleteLessonResponse(BaseModel):
     message: str
+
+class LessonCreateRequest(BaseModel):
+    title: str
+    content: Optional[str] = None
+    video_url: Optional[str] = None
+    order: int
+
+    class Config:
+        from_attributes = True
+
+class LessonUpdateRequest(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    video_url: Optional[str] = None
+    order: Optional[int] = None
+
+    class Config:
+        from_attributes = True

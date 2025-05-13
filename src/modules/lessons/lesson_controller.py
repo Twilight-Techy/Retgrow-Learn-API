@@ -7,11 +7,11 @@ from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
-from src.common.utils.global_functions import award_xp
+from src.common.utils.global_functions import award_xp, ensure_instructor_or_admin
 from src.modules.achievements.achievement_tasks import award_achievement
 from src.modules.lessons import lesson_service, schemas
 from src.common.database.database import get_db_session
-from src.auth.dependencies import get_current_user  # Assumes implementation exists
+from src.auth.dependencies import get_current_user
 from src.models.models import User, UserLesson
 
 router = APIRouter(prefix="/courses", tags=["lessons"])
@@ -22,6 +22,9 @@ async def get_lessons(
     course_id: UUID,
     db: AsyncSession = Depends(get_db_session)
 ):
+    """
+    Retrieve all lessons for a course.
+    """
     lessons = await lesson_service.get_lessons_by_course(course_id, db)
     if not lessons:
         raise HTTPException(
@@ -39,6 +42,9 @@ async def complete_lesson(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
+    """
+    Mark a lesson as completed within a course context.
+    """
     success = await lesson_service.complete_lesson(course_id, lesson_id, current_user, db)
     if not success:
         raise HTTPException(
@@ -102,6 +108,46 @@ async def get_lesson(
     if not lesson:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Lesson not found."
+            detail="Lesson not found"
         )
     return lesson
+
+@router.post("/module/{module_id}", response_model=schemas.LessonResponse)
+async def create_lesson(
+    module_id: UUID,
+    lesson_data: schemas.LessonCreateRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session)
+):
+    """
+    Create a new lesson in a specific module.
+    Only instructors and admins can create lessons.
+    """
+    ensure_instructor_or_admin(current_user)
+    lesson = await lesson_service.create_lesson(str(module_id), lesson_data.model_dump(), db)
+    if not lesson:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to create lesson"
+        )
+    return lesson
+
+@router.put("/{lesson_id}", response_model=schemas.LessonResponse)
+async def update_lesson(
+    lesson_id: UUID,
+    lesson_data: schemas.LessonUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session)
+):
+    """
+    Update an existing lesson.
+    Only instructors and admins can update lessons.
+    """
+    ensure_instructor_or_admin(current_user)
+    updated_lesson = await lesson_service.update_lesson(str(lesson_id), lesson_data.model_dump(), db)
+    if not updated_lesson:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Lesson not found"
+        )
+    return updated_lesson
