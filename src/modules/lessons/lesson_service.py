@@ -1,9 +1,10 @@
 # src/lessons/lesson_service.py
 
-from typing import List, Optional
+from typing import List, Optional, Any
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-from sqlalchemy import and_
+from sqlalchemy.future import select, Result
+from sqlalchemy.exc import NoResultFound
+from sqlalchemy import and_, update
 
 from src.models.models import Lesson, Module, UserLesson, User
 
@@ -73,4 +74,34 @@ async def get_lesson_by_id(lesson_id: str, db: AsyncSession) -> Optional[Lesson]
     stmt = select(Lesson).where(Lesson.id == lesson_id)
     result = await db.execute(stmt)
     lesson = result.scalars().first()
+    return lesson
+
+async def create_lesson(module_id: str, lesson_data: dict, db: AsyncSession) -> Lesson:
+    """
+    Create a new lesson.
+    """
+    new_lesson = Lesson(
+        module_id=module_id,
+        title=lesson_data["title"],
+        content=lesson_data.get("content"),
+        video_url=lesson_data.get("video_url"),
+        order=lesson_data["order"]
+    )
+    db.add(new_lesson)
+    await db.commit()
+    await db.refresh(new_lesson)
+    return new_lesson
+
+async def update_lesson(lesson_id: str, lesson_data: dict, db: AsyncSession) -> Optional[Lesson]:
+    """
+    Update an existing lesson.
+    """
+    lesson = await get_lesson_by_id(lesson_id, db)
+    if not lesson:
+        return None
+    for key, value in lesson_data.items():
+        setattr(lesson, key, value)
+    db.add(lesson)
+    await db.commit()
+    await db.refresh(lesson)
     return lesson

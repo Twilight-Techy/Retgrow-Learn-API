@@ -74,6 +74,21 @@ async def update_course(
         )
     return updated_course
 
+@router.post("/with_content", response_model=schemas.CourseDetailResponse, status_code=status.HTTP_201_CREATED)
+async def create_course_with_content(
+    course_data: schemas.CourseCreateWithContentRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session)
+):
+    ensure_instructor_or_admin(current_user)
+    course = await course_service.create_course_with_content(course_data.model_dump(), db)
+    if not course:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to create course with content."
+        )
+    return schemas.CourseDetailResponse.model_validate(course)
+    
 @router.delete("/{course_id}", response_model=dict)
 async def delete_course(
     course_id: UUID,

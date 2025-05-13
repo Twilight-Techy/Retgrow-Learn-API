@@ -62,6 +62,41 @@ async def create_course(course_data: dict, db: AsyncSession) -> Course:
     await db.refresh(new_course)
     return new_course
 
+async def create_course_with_content(course_data: dict, db: AsyncSession) -> Course:
+    """
+    Create a new course along with its modules and lessons.
+    """
+    new_course = Course(
+        title=course_data["title"],
+        description=course_data.get("description"),
+        image_url=course_data.get("image_url"),
+        level=course_data["level"],
+        duration=course_data.get("duration"),
+        price=course_data.get("price")
+    )
+    db.add(new_course)
+
+    for module_data in course_data.get("modules", []):
+        new_module = Module(
+            title=module_data["title"],
+            order=module_data["order"],
+            course=new_course # Associate module with the course
+        )
+        db.add(new_module)
+        for lesson_data in module_data.get("lessons", []):
+            new_lesson = Lesson(
+                title=lesson_data["title"],
+                content=lesson_data.get("content"),
+                video_url=lesson_data.get("video_url"),
+                order=lesson_data["order"],
+                module=new_module # Associate lesson with the module
+            )
+            db.add(new_lesson)
+
+    await db.commit()
+    await db.refresh(new_course)
+    return new_course
+
 async def delete_course(course_id: str, db: AsyncSession) -> Course:
     """
     Delete a course by its ID.
