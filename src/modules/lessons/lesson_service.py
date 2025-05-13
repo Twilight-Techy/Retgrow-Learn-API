@@ -1,10 +1,9 @@
 # src/lessons/lesson_service.py
 
-from typing import List, Optional, Any
+from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select, Result
-from sqlalchemy.exc import NoResultFound
-from sqlalchemy import and_, update
+from sqlalchemy.future import select
+from sqlalchemy import and_
 
 from src.models.models import Lesson, Module, UserLesson, User
 
@@ -83,8 +82,8 @@ async def create_lesson(module_id: str, lesson_data: dict, db: AsyncSession) -> 
     new_lesson = Lesson(
         module_id=module_id,
         title=lesson_data["title"],
-        content=lesson_data.get("content"),
-        video_url=lesson_data.get("video_url"),
+        content=lesson_data["content"],
+        video_url=lesson_data["video_url"],
         order=lesson_data["order"]
     )
     db.add(new_lesson)
