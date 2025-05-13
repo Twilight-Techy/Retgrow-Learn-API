@@ -123,3 +123,32 @@ async def get_track_curriculum(
             detail="Track or curriculum not found."
         )
     return curriculum
+
+@router.put("/{slug}/courses", response_model=schemas.TrackResponse)
+async def update_track_courses(
+    slug: str,
+    course_updates: schemas.UpdateTrackCoursesRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session)
+):
+    """
+    Update the courses in a track. This endpoint allows:
+    - Adding new courses to the track
+    - Removing courses from the track
+    - Reordering existing courses
+    Only instructors and admins can modify track courses.
+    """
+    ensure_instructor_or_admin(current_user)
+    
+    updated_track = await track_service.update_track_courses(
+        slug, 
+        [course.model_dump() for course in course_updates.courses], 
+        db
+    )
+    
+    if not updated_track:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Track not found"
+        )
+    return updated_track

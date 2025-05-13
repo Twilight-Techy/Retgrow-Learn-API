@@ -72,3 +72,13 @@ class TrackCurriculumResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class TrackCourseUpdate(BaseModel):
+    course_id: UUID
+    order: int
+
+class UpdateTrackCoursesRequest(BaseModel):
+    courses: List[TrackCourseUpdate]
+
+    class Config:
+        from_attributes = True

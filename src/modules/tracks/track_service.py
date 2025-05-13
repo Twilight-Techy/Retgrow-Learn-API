@@ -161,3 +161,53 @@ async def get_popular_tracks(db: AsyncSession, limit: int = 3) -> List[Track]:
     # Each row is a tuple (Track, popularity). We only need the Track instance.
     popular_tracks = [row[0] for row in result.all()]
     return popular_tracks
+
+async def update_track_courses(slug: str, course_updates: List[dict], db: AsyncSession) -> Optional[Track]:
+    """
+    Update the courses in a track. This will:
+    1. Find existing track-course relationships
+    2. Update orders for existing courses
+    3. Add new courses
+    4. Remove courses not in the update list
+    """
+    # Find the track
+    result = await db.execute(select(Track).where(Track.slug == slug))
+    track = result.scalars().first()
+    if not track:
+        return None
+
+    # Get existing track-course relationships
+    stmt = select(TrackCourse).where(TrackCourse.track_id == track.id)
+    result = await db.execute(stmt)
+    existing_track_courses = {str(tc.course_id): tc for tc in result.scalars().all()}
+    
+    # Keep track of processed course IDs to identify which ones to remove
+    processed_course_ids = set()
+
+    # Update existing courses and add new ones
+    for course_data in course_updates:
+        course_id = str(course_data["course_id"])
+        processed_course_ids.add(course_id)
+
+        if course_id in existing_track_courses:
+            # Update existing track-course relationship
+            track_course = existing_track_courses[course_id]
+            track_course.order = course_data["order"]
+            db.add(track_course)
+        else:
+            # Create new track-course relationship
+            new_track_course = TrackCourse(
+                track_id=track.id,
+                course_id=course_data["course_id"],
+                order=course_data["order"]
+            )
+            db.add(new_track_course)
+
+    # Remove courses that weren't in the update
+    for course_id, track_course in existing_track_courses.items():
+        if course_id not in processed_course_ids:
+            await db.delete(track_course)
+
+    await db.commit()
+    await db.refresh(track)
+    return track
