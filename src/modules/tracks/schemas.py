@@ -6,16 +6,16 @@ from uuid import UUID
 from pydantic import BaseModel
 
 class TrackResponse(BaseModel):
-    id: UUID
-    slug: str
+    # id: UUID
+    # slug: str
     title: str
     description: str | None = None
     image_url: str | None = None
-    level: str
-    duration: str | None = None
-    prerequisites: List[str] = []
-    created_at: datetime
-    updated_at: datetime
+    # level: str
+    # duration: str | None = None
+    # prerequisites: List[str] = []
+    # created_at: datetime
+    # updated_at: datetime
 
     class Config:
         from_attributes = True

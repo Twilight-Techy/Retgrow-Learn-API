@@ -12,11 +12,12 @@ from src.models.models import CourseLevel
 class EnrolledCourseResponse(BaseModel):
     id: UUID
     title: str
-    description: str | None = None
-    image_url: str | None = None
-    level: CourseLevel
-    duration: str | None = None
-    price: float
+    progress: float = 0.00  # Percentage of course completion
+    # description: str | None = None
+    # image_url: str | None = None
+    # level: CourseLevel
+    # duration: str | None = None
+    # price: float
 
     class Config:
         from_attributes = True
@@ -52,8 +53,6 @@ class RecentAchievementResponse(BaseModel):
     id: UUID
     title: str
     description: str | None = None
-    icon_url: str | None = None
-    earned_at: datetime
 
     class Config:
         from_attributes = True
