@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings
 
 # Load environment variables from the correct .env file
 os.environ["APP_ENV"] = "development"  # Default to development
-env_file = ".env.development" if os.getenv("APP_ENV") == "development" else ".env.production"
+env_file = ".env" if os.getenv("APP_ENV") == "development" else ".env.production"
 load_dotenv(env_file)  # Load the .env file
 
 class Settings(BaseSettings):
@@ -14,11 +14,11 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     FRONTEND_URL: str
     SUPPORT_URL: str
-    DB_HOST: str
-    DB_PORT: int
-    DB_USER: str
-    DB_PASSWORD: str
-    DB_NAME: str
+    # DB_HOST: str
+    # DB_PORT: int
+    # DB_USER: str
+    # DB_PASSWORD: str
+    # DB_NAME: str
     DATABASE_URL: str
     ALEMBIC_DATABASE_URL: str
     JWT_SECRET: str

@@ -10,7 +10,7 @@ from passlib.context import CryptContext
 from jwt.exceptions import DecodeError
 
 from src.common.config import settings, settings
-from src.common.utils.email import send_email, send_verification_email
+from src.common.utils.email_service import send_email, send_verification_email
 from src.common.utils.otp import generate_verification_code
 from src.models.models import User, UserLogin
 

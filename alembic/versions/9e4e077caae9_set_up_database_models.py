@@ -1,8 +1,8 @@
-"""Set up database models
+"""set up database models
 
-Revision ID: 2be74e5e5f78
+Revision ID: 9e4e077caae9
 Revises: 
-Create Date: 2025-04-09 16:06:18.193605
+Create Date: 2025-09-04 22:12:23.230676
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '2be74e5e5f78'
+revision: str = '9e4e077caae9'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -25,6 +25,18 @@ def upgrade() -> None:
     sa.Column('title', sa.String(length=255), nullable=False),
     sa.Column('description', sa.Text(), nullable=True),
     sa.Column('icon_url', sa.String(length=255), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('courses',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('title', sa.String(length=255), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('image_url', sa.String(length=255), nullable=True),
+    sa.Column('level', sa.Enum('BEGINNER', 'INTERMEDIATE', 'ADVANCED', name='courselevel'), nullable=False),
+    sa.Column('duration', sa.String(length=50), nullable=True),
+    sa.Column('price', sa.Numeric(precision=10, scale=2), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('id')
@@ -53,6 +65,8 @@ def upgrade() -> None:
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('username', sa.String(length=50), nullable=False),
     sa.Column('email', sa.String(length=255), nullable=False),
+    sa.Column('verification_code', sa.String(length=255), nullable=True),
+    sa.Column('is_verified', sa.Boolean(), nullable=False),
     sa.Column('password_hash', sa.String(length=255), nullable=False),
     sa.Column('first_name', sa.String(length=50), nullable=False),
     sa.Column('last_name', sa.String(length=50), nullable=False),
@@ -66,76 +80,6 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
     op.create_index(op.f('ix_users_username'), 'users', ['username'], unique=True)
-    op.create_table('courses',
-    sa.Column('id', sa.UUID(), nullable=False),
-    sa.Column('track_id', sa.UUID(), nullable=False),
-    sa.Column('title', sa.String(length=255), nullable=False),
-    sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('image_url', sa.String(length=255), nullable=True),
-    sa.Column('level', sa.Enum('BEGINNER', 'INTERMEDIATE', 'ADVANCED', name='courselevel'), nullable=False),
-    sa.Column('duration', sa.String(length=50), nullable=True),
-    sa.Column('price', sa.Numeric(precision=10, scale=2), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['track_id'], ['tracks.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_courses_track_id'), 'courses', ['track_id'], unique=False)
-    op.create_table('notifications',
-    sa.Column('id', sa.UUID(), nullable=False),
-    sa.Column('user_id', sa.UUID(), nullable=False),
-    sa.Column('type', sa.Enum('INFO', 'SUCCESS', 'WARNING', name='notificationtype'), nullable=False),
-    sa.Column('message', sa.Text(), nullable=False),
-    sa.Column('read', sa.Boolean(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_notifications_user_id'), 'notifications', ['user_id'], unique=False)
-    op.create_table('resources',
-    sa.Column('id', sa.UUID(), nullable=False),
-    sa.Column('title', sa.String(length=255), nullable=False),
-    sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('type', sa.Enum('ARTICLE', 'VIDEO', 'EBOOK', 'TUTORIAL', name='resourcetype'), nullable=False),
-    sa.Column('url', sa.String(length=255), nullable=False),
-    sa.Column('track_id', sa.UUID(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['track_id'], ['tracks.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_resources_track_id'), 'resources', ['track_id'], unique=False)
-    op.create_table('user_achievements',
-    sa.Column('id', sa.UUID(), nullable=False),
-    sa.Column('user_id', sa.UUID(), nullable=False),
-    sa.Column('achievement_id', sa.UUID(), nullable=False),
-    sa.Column('earned_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['achievement_id'], ['achievements.id'], ),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_user_achievements_achievement_id'), 'user_achievements', ['achievement_id'], unique=False)
-    op.create_index(op.f('ix_user_achievements_user_id'), 'user_achievements', ['user_id'], unique=False)
-    op.create_table('user_logins',
-    sa.Column('id', sa.UUID(), nullable=False),
-    sa.Column('user_id', sa.UUID(), nullable=False),
-    sa.Column('login_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_user_logins_user_id'), 'user_logins', ['user_id'], unique=False)
-    op.create_table('user_skills',
-    sa.Column('id', sa.UUID(), nullable=False),
-    sa.Column('user_id', sa.UUID(), nullable=False),
-    sa.Column('skill_id', sa.UUID(), nullable=False),
-    sa.Column('proficiency', sa.Float(), nullable=False),
-    sa.Column('last_updated', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['skill_id'], ['skills.id'], ),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_user_skills_skill_id'), 'user_skills', ['skill_id'], unique=False)
-    op.create_index(op.f('ix_user_skills_user_id'), 'user_skills', ['user_id'], unique=False)
     op.create_table('deadlines',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('title', sa.String(length=255), nullable=False),
@@ -187,9 +131,21 @@ def upgrade() -> None:
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.ForeignKeyConstraint(['course_id'], ['courses.id'], ),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('course_id', 'order', name='unique_course_module_order')
     )
     op.create_index(op.f('ix_modules_course_id'), 'modules', ['course_id'], unique=False)
+    op.create_table('notifications',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('user_id', sa.UUID(), nullable=False),
+    sa.Column('type', sa.Enum('INFO', 'SUCCESS', 'WARNING', name='notificationtype'), nullable=False),
+    sa.Column('message', sa.Text(), nullable=False),
+    sa.Column('read', sa.Boolean(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_notifications_user_id'), 'notifications', ['user_id'], unique=False)
     op.create_table('quizzes',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('course_id', sa.UUID(), nullable=False),
@@ -202,6 +158,19 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_quizzes_course_id'), 'quizzes', ['course_id'], unique=False)
+    op.create_table('resources',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('title', sa.String(length=255), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('type', sa.Enum('ARTICLE', 'VIDEO', 'EBOOK', 'TUTORIAL', name='resourcetype'), nullable=False),
+    sa.Column('url', sa.String(length=255), nullable=False),
+    sa.Column('track_id', sa.UUID(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['track_id'], ['tracks.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_resources_track_id'), 'resources', ['track_id'], unique=False)
     op.create_table('track_courses',
     sa.Column('track_id', sa.UUID(), nullable=False),
     sa.Column('course_id', sa.UUID(), nullable=False),
@@ -210,6 +179,17 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['track_id'], ['tracks.id'], ),
     sa.PrimaryKeyConstraint('track_id', 'course_id')
     )
+    op.create_table('user_achievements',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('user_id', sa.UUID(), nullable=False),
+    sa.Column('achievement_id', sa.UUID(), nullable=False),
+    sa.Column('earned_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['achievement_id'], ['achievements.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_user_achievements_achievement_id'), 'user_achievements', ['achievement_id'], unique=False)
+    op.create_index(op.f('ix_user_achievements_user_id'), 'user_achievements', ['user_id'], unique=False)
     op.create_table('user_courses',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
@@ -223,17 +203,26 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_user_courses_course_id'), 'user_courses', ['course_id'], unique=False)
     op.create_index(op.f('ix_user_courses_user_id'), 'user_courses', ['user_id'], unique=False)
-    op.create_table('user_resources',
+    op.create_table('user_logins',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
-    sa.Column('resource_id', sa.UUID(), nullable=False),
-    sa.Column('last_accessed', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['resource_id'], ['resources.id'], ),
+    sa.Column('login_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_user_resources_resource_id'), 'user_resources', ['resource_id'], unique=False)
-    op.create_index(op.f('ix_user_resources_user_id'), 'user_resources', ['user_id'], unique=False)
+    op.create_index(op.f('ix_user_logins_user_id'), 'user_logins', ['user_id'], unique=False)
+    op.create_table('user_skills',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('user_id', sa.UUID(), nullable=False),
+    sa.Column('skill_id', sa.UUID(), nullable=False),
+    sa.Column('proficiency', sa.Float(), nullable=False),
+    sa.Column('last_updated', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['skill_id'], ['skills.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_user_skills_skill_id'), 'user_skills', ['skill_id'], unique=False)
+    op.create_index(op.f('ix_user_skills_user_id'), 'user_skills', ['user_id'], unique=False)
     op.create_table('course_quizzes',
     sa.Column('course_id', sa.UUID(), nullable=False),
     sa.Column('quiz_id', sa.UUID(), nullable=False),
@@ -265,7 +254,8 @@ def upgrade() -> None:
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.ForeignKeyConstraint(['module_id'], ['modules.id'], ),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('module_id', 'order', name='unique_module_lesson_order')
     )
     op.create_index(op.f('ix_lessons_module_id'), 'lessons', ['module_id'], unique=False)
     op.create_table('quiz_questions',
@@ -291,6 +281,17 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_user_quizzes_quiz_id'), 'user_quizzes', ['quiz_id'], unique=False)
     op.create_index(op.f('ix_user_quizzes_user_id'), 'user_quizzes', ['user_id'], unique=False)
+    op.create_table('user_resources',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('user_id', sa.UUID(), nullable=False),
+    sa.Column('resource_id', sa.UUID(), nullable=False),
+    sa.Column('last_accessed', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['resource_id'], ['resources.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_user_resources_resource_id'), 'user_resources', ['resource_id'], unique=False)
+    op.create_index(op.f('ix_user_resources_user_id'), 'user_resources', ['user_id'], unique=False)
     op.create_table('user_lessons',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
@@ -310,6 +311,9 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_user_lessons_user_id'), table_name='user_lessons')
     op.drop_index(op.f('ix_user_lessons_lesson_id'), table_name='user_lessons')
     op.drop_table('user_lessons')
+    op.drop_index(op.f('ix_user_resources_user_id'), table_name='user_resources')
+    op.drop_index(op.f('ix_user_resources_resource_id'), table_name='user_resources')
+    op.drop_table('user_resources')
     op.drop_index(op.f('ix_user_quizzes_user_id'), table_name='user_quizzes')
     op.drop_index(op.f('ix_user_quizzes_quiz_id'), table_name='user_quizzes')
     op.drop_table('user_quizzes')
@@ -321,15 +325,24 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_discussion_replies_discussion_id'), table_name='discussion_replies')
     op.drop_table('discussion_replies')
     op.drop_table('course_quizzes')
-    op.drop_index(op.f('ix_user_resources_user_id'), table_name='user_resources')
-    op.drop_index(op.f('ix_user_resources_resource_id'), table_name='user_resources')
-    op.drop_table('user_resources')
+    op.drop_index(op.f('ix_user_skills_user_id'), table_name='user_skills')
+    op.drop_index(op.f('ix_user_skills_skill_id'), table_name='user_skills')
+    op.drop_table('user_skills')
+    op.drop_index(op.f('ix_user_logins_user_id'), table_name='user_logins')
+    op.drop_table('user_logins')
     op.drop_index(op.f('ix_user_courses_user_id'), table_name='user_courses')
     op.drop_index(op.f('ix_user_courses_course_id'), table_name='user_courses')
     op.drop_table('user_courses')
+    op.drop_index(op.f('ix_user_achievements_user_id'), table_name='user_achievements')
+    op.drop_index(op.f('ix_user_achievements_achievement_id'), table_name='user_achievements')
+    op.drop_table('user_achievements')
     op.drop_table('track_courses')
+    op.drop_index(op.f('ix_resources_track_id'), table_name='resources')
+    op.drop_table('resources')
     op.drop_index(op.f('ix_quizzes_course_id'), table_name='quizzes')
     op.drop_table('quizzes')
+    op.drop_index(op.f('ix_notifications_user_id'), table_name='notifications')
+    op.drop_table('notifications')
     op.drop_index(op.f('ix_modules_course_id'), table_name='modules')
     op.drop_table('modules')
     op.drop_index(op.f('ix_learning_paths_user_id'), table_name='learning_paths')
@@ -341,25 +354,12 @@ def downgrade() -> None:
     op.drop_table('discussions')
     op.drop_index(op.f('ix_deadlines_course_id'), table_name='deadlines')
     op.drop_table('deadlines')
-    op.drop_index(op.f('ix_user_skills_user_id'), table_name='user_skills')
-    op.drop_index(op.f('ix_user_skills_skill_id'), table_name='user_skills')
-    op.drop_table('user_skills')
-    op.drop_index(op.f('ix_user_logins_user_id'), table_name='user_logins')
-    op.drop_table('user_logins')
-    op.drop_index(op.f('ix_user_achievements_user_id'), table_name='user_achievements')
-    op.drop_index(op.f('ix_user_achievements_achievement_id'), table_name='user_achievements')
-    op.drop_table('user_achievements')
-    op.drop_index(op.f('ix_resources_track_id'), table_name='resources')
-    op.drop_table('resources')
-    op.drop_index(op.f('ix_notifications_user_id'), table_name='notifications')
-    op.drop_table('notifications')
-    op.drop_index(op.f('ix_courses_track_id'), table_name='courses')
-    op.drop_table('courses')
     op.drop_index(op.f('ix_users_username'), table_name='users')
     op.drop_index(op.f('ix_users_email'), table_name='users')
     op.drop_table('users')
     op.drop_index(op.f('ix_tracks_slug'), table_name='tracks')
     op.drop_table('tracks')
     op.drop_table('skills')
+    op.drop_table('courses')
     op.drop_table('achievements')
     # ### end Alembic commands ###

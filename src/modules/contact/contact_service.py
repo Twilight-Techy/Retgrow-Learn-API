@@ -1,5 +1,5 @@
 from src.common.config import settings
-from src.common.utils.email import send_email  # Reuse the existing email utility
+from src.common.utils.email_service import send_email  # Reuse the existing email utility
 
 async def process_contact_form(form_data: dict) -> bool:
     """
