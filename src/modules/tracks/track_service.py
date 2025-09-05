@@ -148,18 +148,41 @@ async def get_track_curriculum(slug: str, db: AsyncSession) -> List[dict]:
 async def get_popular_tracks(db: AsyncSession, limit: int = 3) -> List[Track]:
     """
     Retrieve the top 'limit' popular tracks, determined by the number of LearningPath records
-    (enrollments) for each track.
+    (enrollments) for each track. If fewer than 'limit' tracks are found,
+    the remaining spots are filled with the most recently created tracks.
     """
-    stmt = (
+    # 1. Get the popular tracks
+    stmt_popular = (
         select(Track, func.count(LearningPath.user_id).label("popularity"))
         .join(LearningPath, LearningPath.track_id == Track.id)
         .group_by(Track.id)
         .order_by(func.count(LearningPath.user_id).desc())
         .limit(limit)
     )
-    result = await db.execute(stmt)
-    # Each row is a tuple (Track, popularity). We only need the Track instance.
-    popular_tracks = [row[0] for row in result.all()]
+    result_popular = await db.execute(stmt_popular)
+    popular_tracks = [row[0] for row in result_popular.all()]
+
+    # 2. Check if we have enough tracks
+    if len(popular_tracks) < limit:
+        # Calculate how many more tracks we need
+        needed = limit - len(popular_tracks)
+        
+        # Get the IDs of the popular tracks to exclude them from the new query
+        popular_track_ids = [track.id for track in popular_tracks]
+        
+        # Query for the most recently created tracks that are not already in our list
+        stmt_recent = (
+            select(Track)
+            .where(Track.id.notin_(popular_track_ids))
+            .order_by(Track.created_at.desc())
+            .limit(needed)
+        )
+        result_recent = await db.execute(stmt_recent)
+        recent_tracks = result_recent.scalars().all()
+        
+        # 3. Combine the lists
+        popular_tracks.extend(recent_tracks)
+
     return popular_tracks
 
 async def update_track_courses(slug: str, course_updates: List[dict], db: AsyncSession) -> Optional[Track]:

@@ -36,10 +36,10 @@ class Settings(BaseSettings):
     CONTACT_RECIPIENT: str
 
     # Uncomment if you want to support comma-separated ALLOWED_ORIGINS strings
-    # @field_validator("ALLOWED_ORIGINS", mode="before")
-    # def split_origins(cls, value):
-    #     if isinstance(value, str):
-    #         return [origin.strip() for origin in value.split(",") if origin.strip()]
-    #     return value
+    @field_validator("ALLOWED_ORIGINS", mode="before")
+    def split_origins(cls, value):
+        if isinstance(value, str):
+            return [origin.strip() for origin in value.split(",") if origin.strip()]
+        return value
 
 settings = Settings()
