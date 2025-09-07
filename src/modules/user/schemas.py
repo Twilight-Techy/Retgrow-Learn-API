@@ -30,6 +30,7 @@ class UpdateProfileRequest(BaseModel):
 class CourseProgress(BaseModel):
     course_id: UUID
     progress: float
+    title: str
 
     class Config:
         from_attributes = True
