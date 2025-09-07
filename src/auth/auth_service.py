@@ -48,12 +48,12 @@ async def create_user(user_data: dict, db: AsyncSession):
         if existing_user.email == user_data["email"]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="A user with this email already exists"
+                detail="A user with this email already exists!"
             )
         elif existing_user.username == user_data["username"]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="A user with this username already exists"
+                detail="A user with this username already exists!"
             )
 
     verification_code = generate_verification_code()
@@ -78,14 +78,14 @@ async def signup_user(user_data: dict, db: AsyncSession, background_tasks: Backg
     if user_data["password"] != user_data["password_confirm"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Passwords do not match"
+            detail="Passwords do not match!"
         )
 
     new_user = await create_user(user_data, db)
     if not new_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid signup data or user already exists"
+            detail="Invalid signup data or user already exists!"
         )
 
     background_tasks.add_task(send_verification_email, new_user.email, new_user.first_name, new_user.verification_code)
@@ -97,9 +97,9 @@ async def resend_verification_email(email: str, db: AsyncSession, background_tas
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalars().first()
     if not user:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User not found.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User not found!")
     if user.is_verified:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User is already verified.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User is already verified!")
 
     new_verification_code = generate_verification_code()
     user.verification_code = new_verification_code
@@ -116,19 +116,19 @@ async def verify_user(verification_data: dict, db: AsyncSession, background_task
     if not user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="The user does not exist."
+            detail="The user does not exist!"
         )
 
     if user.is_verified:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User is already verified."
+            detail="User is already verified!"
         )
 
     if user.verification_code != verification_data["verification_code"]:    
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid verification code."
+            detail="Invalid verification code!"
         )
 
     user.is_verified = True
@@ -160,12 +160,12 @@ async def authenticate_user(email: str, password: str, db: AsyncSession):
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="The email you provided does not exist",
+            detail="The email you provided does not exist!",
         )
     if not verify_password(password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials provided",
+            detail="Invalid credentials provided!",
         )
     return user
 
