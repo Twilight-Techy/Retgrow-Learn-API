@@ -3,17 +3,80 @@
 from datetime import datetime, timezone
 from typing import List, Optional
 import uuid
+from sqlalchemy import or_
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
-from src.models.models import Resource, UserResource
+from src.models.models import Resource, Track, UserResource
 
-async def get_all_resources(db: AsyncSession) -> List[Resource]:
+async def get_resources(
+    db: AsyncSession,
+    q: Optional[str] = None,
+    track_slug: Optional[str] = None,
+    rtype: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 10,
+) -> List[dict]:
     """
-    Retrieve all resources from the database.
+    Return resources filtered by q (title/description), track_slug and type.
+    Returns list of dicts that match ResourceResponse schema (includes track_title/track_slug).
     """
-    result = await db.execute(select(Resource))
-    resources = result.scalars().all()
+    # build base select that returns Resource + Track.title + Track.slug (left join)
+    stmt = select(Resource, Track.title.label("track_title"), Track.slug.label("track_slug")).outerjoin(
+        Track, Resource.track_id == Track.id
+    )
+
+    # filters
+    conditions = []
+
+    if q:
+        q_like = f"%{q}%"
+        conditions.append(or_(Resource.title.ilike(q_like), Resource.description.ilike(q_like)))
+
+    if rtype:
+        # convert string to enum safely — raises ValueError if invalid
+        try:
+            from src.models.models import ResourceType as RT  # adjust import path
+            rtype_enum = RT(rtype)  # RT("article") -> ResourceType.ARTICLE
+            conditions.append(Resource.type == rtype_enum)
+        except Exception:
+            # invalid rtype — return empty list or ignore filter; here we ignore the filter
+            # Alternatively, you could raise a ValueError to the controller to return 400
+            pass
+
+    if track_slug:
+        conditions.append(Track.slug == track_slug)
+
+    if conditions:
+        stmt = stmt.where(*conditions)
+
+    # apply pagination (offset & limit)
+    stmt = stmt.offset(skip).limit(limit)
+
+    result = await db.execute(stmt)
+    rows = result.all()  # returns list of Row objects (Resource, track_title, track_slug)
+
+    resources = []
+    for row in rows:
+        resource_obj = row[0]  # the Resource instance
+        track_title = row[1] if len(row) > 1 else None
+        track_slug_val = row[2] if len(row) > 2 else None
+
+        resources.append({
+            "id": str(resource_obj.id),
+            "title": resource_obj.title,
+            "description": resource_obj.description,
+            "image_url": resource_obj.image_url,
+            "type": resource_obj.type.value if getattr(resource_obj, "type", None) is not None else None,
+            "url": resource_obj.url,
+            "track_id": str(resource_obj.track_id) if resource_obj.track_id else None,
+            "track_title": track_title,
+            "track_slug": track_slug_val,
+            "created_at": resource_obj.created_at,
+            "updated_at": resource_obj.updated_at,
+        })
+
     return resources
 
 async def get_resource_by_id(resource_id: str, db: AsyncSession) -> Optional[Resource]:

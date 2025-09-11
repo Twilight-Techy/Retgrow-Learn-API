@@ -1,9 +1,9 @@
 # src/resources/resource_controller.py
 
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List
+from typing import List, Optional
 
 from src.auth.dependencies import get_current_user
 from src.common.utils.global_functions import ensure_instructor_or_admin
@@ -15,8 +15,15 @@ router = APIRouter(prefix="/resources", tags=["resources"])
 
 # GET /resources – Retrieve all resources
 @router.get("", response_model=List[schemas.ResourceResponse])
-async def get_resources(db: AsyncSession = Depends(get_db_session)):
-    resources = await resource_service.get_all_resources(db)
+async def get_resources(
+    q: Optional[str] = Query(None, description="Search query for title/description"),
+    track: Optional[str] = Query(None, description="Track slug to filter by"),
+    type: Optional[str] = Query(None, description="Resource type (Article, Video, ...)"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1),
+    db: AsyncSession = Depends(get_db_session),
+):
+    resources = await resource_service.get_resources(db, q=q, track_slug=track, rtype=type, skip=skip, limit=limit)
     return resources
 
 # GET /resources/{resourceId} – Retrieve a specific resource by its ID

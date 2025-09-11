@@ -9,9 +9,12 @@ class ResourceResponse(BaseModel):
     id: UUID
     title: str
     description: Optional[str] = None
+    image_url: Optional[str] = None
     type: str
     url: str
     track_id: Optional[UUID] = None
+    track_title: Optional[str] = None
+    track_slug: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
