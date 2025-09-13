@@ -58,6 +58,8 @@ class QuizSummaryResponse(BaseModel):
     course_id: UUID
     title: str
     time_limit: int  # in minutes
+    questions_count: int = 0
+    completed: bool = False
 
     class Config:
         from_attributes = True

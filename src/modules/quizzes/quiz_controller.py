@@ -38,6 +38,24 @@ async def get_quizzes_for_track(
         )
     return quizzes_by_track
 
+@router.get("/user", response_model=List[schemas.CourseQuizzesResponse])
+async def get_user_quizzes(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """
+    Return quizzes relevant to the current user:
+      - quizzes from the user's active learning path (track)
+      - quizzes from courses the user is enrolled in (user_courses)
+      - quizzes the user has completed (user_quizzes)
+    Results are unique by quiz id and grouped by course.
+    """
+    grouped = await quiz_service.get_user_relevant_quizzes(current_user, db)
+    if grouped is None:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch quizzes")
+    # Optionally validate using schemas (fastapi will validate response_model)
+    return grouped
+
 @router.get("/{quiz_id}", response_model=schemas.QuizResponse)
 async def get_quiz(quiz_id: UUID, db: AsyncSession = Depends(get_db_session)):
     """
