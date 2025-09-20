@@ -38,6 +38,7 @@ class RecentResourceResponse(BaseModel):
 class DeadlineResponse(BaseModel):
     id: UUID
     title: str
+    description: str | None = None
     due_date: datetime
 
     class Config:
@@ -53,6 +54,7 @@ class RecentAchievementResponse(BaseModel):
     id: UUID
     title: str
     description: str | None = None
+    earned_at: datetime
 
     class Config:
         from_attributes = True

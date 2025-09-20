@@ -2,6 +2,7 @@
 
 from typing import List
 from sqlalchemy.future import select
+from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta, timezone
 
@@ -10,34 +11,42 @@ from src.models.models import LearningPath, TrackCourse, UserAchievement, UserCo
 # Service function to get enrolled courses for a user.
 async def get_enrolled_courses(user_id: str, db: AsyncSession) -> List[Course]:
     # Query the UserCourse join table and retrieve related Course objects.
-    stmt = select(Course).join(UserCourse).where(UserCourse.user_id == user_id)
+    stmt = select(Course, UserCourse.progress).join(UserCourse, UserCourse.course_id == Course.id).where(UserCourse.user_id == user_id)
     result = await db.execute(stmt)
-    courses = result.scalars().all()
+    rows = result.scalars().all()
+    courses = []
+    for course, progress in rows:
+        setattr(course, "progress", float(progress or 0))
+        courses.append(course)
     return courses
 
 # Service function to get recent resources for a user.
-async def get_recent_resources(user_id: str, db: AsyncSession, limit: int = 5) -> List[Resource]:
-    # Query UserResource and join with Resource; order by last_accessed descending.
+async def get_recent_resources(user_id: str, db: AsyncSession, limit: int = 5):
+    # join UserResource -> Resource, include Track info
     stmt = (
         select(Resource)
-        .join(UserResource)
+        .join(UserResource, UserResource.resource_id == Resource.id)
+        .options(joinedload(Resource.track))
         .where(UserResource.user_id == user_id)
         .order_by(UserResource.last_accessed.desc())
         .limit(limit)
     )
-    result = await db.execute(stmt)
-    resources = result.scalars().all()
+    res = await db.execute(stmt)
+    resources = res.scalars().all()
+    # Resource.track is available; Pydantic can read attributes (track.slug, track.title) if schema defines them.
     return resources
 
 # Service function to get upcoming deadlines.
-async def get_upcoming_deadlines(user_id: str, db: AsyncSession) -> List[Deadline]:
+async def get_upcoming_deadlines(user_id: str, db: AsyncSession, limit: int = 10) -> List[Deadline]:
     enrolled_courses = await get_enrolled_courses(user_id, db)
     course_ids = [course.id for course in enrolled_courses]
+    if not course_ids:
+        return []
     now = datetime.now(timezone.utc)
     stmt = (
         select(Deadline)
         .where(Deadline.course_id.in_(course_ids), Deadline.due_date >= now)
-        .order_by(Deadline.due_date.asc())
+        .order_by(Deadline.due_date.asc()).limit(limit)
     )
     result = await db.execute(stmt)
     deadlines = result.scalars().all()
@@ -63,6 +72,7 @@ async def get_recent_achievements(user_id: str, db: AsyncSession, limit: int = 5
     stmt = (
         select(UserAchievement)
         .where(UserAchievement.user_id == user_id)
+        .options(selectinload(UserAchievement.achievement))
         .order_by(UserAchievement.earned_at.desc())
         .limit(limit)
     )

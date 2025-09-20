@@ -20,11 +20,6 @@ async def get_learning_path(
     Retrieve the learning path for the currently authenticated user.
     """
     learning_path = await learning_path_service.get_learning_path(str(current_user.id), db)
-    if not learning_path:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Learning path not found for this user."
-        )
     return learning_path
 
 @router.get("/skills", response_model=List[schemas.UserSkillResponse])

@@ -32,51 +32,38 @@ async def get_enrolled_courses(
     db: AsyncSession = Depends(get_db_session)
 ):
     courses = await dashboard_service.get_enrolled_courses(str(current_user.id), db)
-    if not courses:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No enrolled courses found."
-        )
     return courses
 
 # GET /user/recent-resources – List recent resources.
 @router.get("/recent-resources", response_model=List[schemas.RecentResourceResponse])
 async def get_recent_resources(
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_session)
+    db: AsyncSession = Depends(get_db_session),
+    limit: int = 5
 ):
-    resources = await dashboard_service.get_recent_resources(str(current_user.id), db)
-    if not resources:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No recent resources found."
-        )
+    resources = await dashboard_service.get_recent_resources(str(current_user.id), db, limit=limit)
     return resources
 
 # GET /user/upcoming-deadlines – List upcoming deadlines.
 @router.get("/upcoming-deadlines", response_model=List[schemas.DeadlineResponse])
 async def get_upcoming_deadlines(
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_session)
+    db: AsyncSession = Depends(get_db_session),
+    limit: int = 10
 ):
-    deadlines = await dashboard_service.get_upcoming_deadlines(str(current_user.id), db)
-    # Here, even if deadlines are empty, we simply return an empty list.
+    deadlines = await dashboard_service.get_upcoming_deadlines(str(current_user.id), db, limit=limit)
     return deadlines
 
 @router.get("/recent-achievements", response_model=List[schemas.RecentAchievementResponse])
 async def get_recent_achievements(
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_session)
+    db: AsyncSession = Depends(get_db_session),
+    limit: int = 3
 ):
     """
     Retrieve the most recent achievements awarded to the current user.
     """
-    recent_achievements = await dashboard_service.get_recent_achievements(str(current_user.id), db)
-    if recent_achievements is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No achievements found for the user."
-        )
+    recent_achievements = await dashboard_service.get_recent_achievements(str(current_user.id), db, limit=limit)
     return recent_achievements
 
 @router.get("/progress-overview", response_model=List[schemas.ProgressOverviewItem])
@@ -107,9 +94,4 @@ async def get_recommended_courses(
     sorted by the track-specific order.
     """
     recommended_courses = await dashboard_service.get_recommended_courses(str(current_user.id), db)
-    if not recommended_courses:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No recommended courses available."
-        )
     return recommended_courses
