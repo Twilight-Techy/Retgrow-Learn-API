@@ -1,17 +1,19 @@
 # src/achievements/achievement_service.py
 
-from typing import List
 from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.models.models import UserAchievement
 
-async def get_user_achievements(user_id: str, db: AsyncSession) -> List[UserAchievement]:
+async def get_user_achievements(user_id: str, db: AsyncSession):
     """
     Retrieve all achievements earned by the user.
     """
-    result = await db.execute(select(UserAchievement).where(UserAchievement.user_id == user_id))
-    achievements = result.scalars().all()
-    return achievements
+    stmt = select(UserAchievement).where(UserAchievement.user_id == user_id).options(
+        selectinload(UserAchievement.achievement)
+    ).order_by(UserAchievement.earned_at.desc())
+    res = await db.execute(stmt)
+    return res.scalars().all()
 
 def calculate_level_progress(xp: int) -> dict:
     """

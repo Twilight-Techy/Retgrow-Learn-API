@@ -20,11 +20,6 @@ async def get_user_achievements(
     Retrieve all achievements earned by the currently authenticated user.
     """
     achievements = await achievement_service.get_user_achievements(str(current_user.id), db)
-    if not achievements:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No achievements found for this user."
-        )
     return achievements
 
 @router.get("/level", response_model=schemas.LevelResponse)
