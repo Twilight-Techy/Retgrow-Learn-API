@@ -4,10 +4,11 @@ from typing import List, Optional
 import uuid
 from fastapi import HTTPException, status
 from sqlalchemy import func, or_
+from sqlalchemy.orm import selectinload
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models.models import LearningPath, Module, Track, TrackCourse
+from src.models.models import LearningPath, Lesson, Module, Track, TrackCourse
 
 async def get_all_tracks(
     db: AsyncSession, 
@@ -96,29 +97,30 @@ async def delete_track(slug: str, db: AsyncSession) -> bool:
 
 async def get_track_curriculum(slug: str, db: AsyncSession) -> List[dict]:
     """
-    Retrieve the curriculum for the track identified by the given slug.
-    Returns a list of dictionaries with course details, order, and their respective modules.
+    Returns a list of courses for the given track slug. Each course contains modules
+    and each module contains ordered lessons. Matches CurriculumCourseResponse schema.
     """
-    # Find the track by its slug.
+    # Find the track
     track_result = await db.execute(select(Track).where(Track.slug == slug))
     track = track_result.scalars().first()
     if not track:
         return []
 
-    # Retrieve track courses ordered by the `order` field.
-    stmt = (
+    # Eager-load `course` for every TrackCourse to avoid lazy-load at access time
+    tc_stmt = (
         select(TrackCourse)
         .where(TrackCourse.track_id == track.id)
         .order_by(TrackCourse.order.asc())
+        .options(selectinload(TrackCourse.course))
     )
-    result = await db.execute(stmt)
-    track_course_records = result.scalars().all()
+    tc_result = await db.execute(tc_stmt)
+    track_course_records = tc_result.scalars().all()
 
     curriculum = []
-    for track_course in track_course_records:
-        course = track_course.course  # Assuming a relationship exists in TrackCourse model
+    for tc in track_course_records:
+        course = tc.course  # now already loaded, no lazy-load
 
-        # Fetch all modules for this course, ordered by position
+        # Fetch modules for this course (ordered)
         module_stmt = (
             select(Module)
             .where(Module.course_id == course.id)
@@ -127,20 +129,34 @@ async def get_track_curriculum(slug: str, db: AsyncSession) -> List[dict]:
         module_result = await db.execute(module_stmt)
         modules = module_result.scalars().all()
 
+        modules_out = []
+        for module in modules:
+            # Fetch lessons for module (ordered)
+            lesson_stmt = (
+                select(Lesson)
+                .where(Lesson.module_id == module.id)
+                .order_by(Lesson.order.asc())
+            )
+            lesson_result = await db.execute(lesson_stmt)
+            lessons = lesson_result.scalars().all()
+
+            modules_out.append({
+                "id": str(module.id),
+                "title": module.title,
+                "description": getattr(module, "description", None),
+                "order": module.order,
+                "lessons": [
+                    {"id": str(lesson.id), "title": lesson.title, "order": lesson.order}
+                    for lesson in lessons
+                ],
+            })
+
         curriculum.append({
             "id": str(course.id),
             "title": course.title,
             "description": course.description,
-            "order": track_course.order,
-            "modules": [
-                {
-                    "id": str(module.id),
-                    "title": module.title,
-                    "description": module.description,
-                    "order": module.order
-                }
-                for module in modules
-            ]
+            "order": tc.order,
+            "modules": modules_out,
         })
 
     return curriculum

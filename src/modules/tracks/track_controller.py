@@ -106,7 +106,7 @@ async def delete_track(
         )
     return {"message": "Track deleted successfully."}
 
-@router.get("/{slug}/curriculum", response_model=schemas.TrackCurriculumResponse)
+@router.get("/{slug}/curriculum", response_model=List[schemas.CurriculumCourseResponse])
 async def get_track_curriculum(
     slug: str,
     db: AsyncSession = Depends(get_db_session)
@@ -117,7 +117,7 @@ async def get_track_curriculum(
     an ordered list of courses with their modules.
     """
     curriculum = await track_service.get_track_curriculum(slug, db)
-    if not curriculum:
+    if curriculum is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Track or curriculum not found."

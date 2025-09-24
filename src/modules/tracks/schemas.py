@@ -44,11 +44,30 @@ class TrackUpdateRequest(BaseModel):
     class Config:
         from_attributes = True
 
+class TrackCourseUpdate(BaseModel):
+    course_id: UUID
+    order: int
+
+class UpdateTrackCoursesRequest(BaseModel):
+    courses: List[TrackCourseUpdate]
+
+    class Config:
+        from_attributes = True
+
+class LessonResponse(BaseModel):
+    id: UUID
+    title: str
+    order: int
+
+    class Config:
+        from_attributes = True
+
 class ModuleResponse(BaseModel):
     id: UUID
     title: str
     description: Optional[str] = None
     order: int
+    lessons: List[LessonResponse] = []
 
     class Config:
         from_attributes = True
@@ -59,27 +78,6 @@ class CurriculumCourseResponse(BaseModel):
     description: Optional[str] = None
     order: int  # Order of the course in this track
     modules: List[ModuleResponse] = []
-
-    class Config:
-        from_attributes = True
-
-class TrackCurriculumResponse(BaseModel):
-    id: UUID
-    title: str
-    description: Optional[str] = None
-    prerequisites: List[str] = []  # List of topics the user must know to take this track
-    order: int
-    modules: List[ModuleResponse]
-
-    class Config:
-        from_attributes = True
-
-class TrackCourseUpdate(BaseModel):
-    course_id: UUID
-    order: int
-
-class UpdateTrackCoursesRequest(BaseModel):
-    courses: List[TrackCourseUpdate]
 
     class Config:
         from_attributes = True
