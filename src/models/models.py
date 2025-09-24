@@ -187,6 +187,7 @@ class UserLesson(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     lesson_id = Column(UUID(as_uuid=True), ForeignKey("lessons.id"), nullable=False, index=True)
+    applied_to_skills = Column(Boolean, nullable=False, default=False)
     completed_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     # Relationships to the User and Lesson models
@@ -240,6 +241,7 @@ class UserQuiz(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     quiz_id = Column(UUID(as_uuid=True), ForeignKey("quizzes.id"), nullable=False, index=True)
     score = Column(Float, nullable=False, default=0.0)
+    applied_to_skills = Column(Boolean, nullable=False, default=False)
     completed_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     # Relationships: A UserQuiz links a User and a Quiz
@@ -445,6 +447,57 @@ class UserSkill(Base):
     def __repr__(self):
         return (f"<UserSkill(id={self.id}, user_id={self.user_id}, skill_id={self.skill_id}, "
                 f"proficiency={self.proficiency}, last_updated={self.last_updated})>")
+
+class CourseSkill(Base):
+    __tablename__ = "course_skills"
+    # each record says: this course has this skill (for meta), optional default percent
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+    course_id = Column(UUID(as_uuid=True), ForeignKey("courses.id"), nullable=False, index=True)
+    skill_id = Column(UUID(as_uuid=True), ForeignKey("skills.id"), nullable=False, index=True)
+    # overallPercent is optional, we will require module+quiz percentages sum to 100, but store for convenience
+    overall_percent = Column(Float, nullable=True)  # 0-100 (optional)
+
+    course: Mapped[Course] = relationship("Course", backref=backref("course_skills", cascade="all, delete-orphan"))
+    skill: Mapped[Skill] = relationship("Skill", backref=backref("course_skills", cascade="all, delete-orphan"))
+
+    __table_args__ = (UniqueConstraint("course_id", "skill_id", name="uq_course_skill"),)
+
+    def __repr__(self):
+        return f"<CourseSkill(course={self.course_id}, skill={self.skill_id}, overall={self.overall_percent})>"
+
+
+class ModuleSkill(Base):
+    __tablename__ = "module_skills"
+    # percentage is how much this module contributes to the given skill (0-100 scale)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+    module_id = Column(UUID(as_uuid=True), ForeignKey("modules.id"), nullable=False, index=True)
+    skill_id = Column(UUID(as_uuid=True), ForeignKey("skills.id"), nullable=False, index=True)
+    percent = Column(Float, nullable=False)  # expected to be 0 <= percent <= 100
+
+    module: Mapped[Module] = relationship("Module", backref=backref("module_skills", cascade="all, delete-orphan"))
+    skill: Mapped[Skill] = relationship("Skill", backref=backref("module_skills", cascade="all, delete-orphan"))
+
+    __table_args__ = (UniqueConstraint("module_id", "skill_id", name="uq_module_skill"),)
+
+    def __repr__(self):
+        return f"<ModuleSkill(module={self.module_id}, skill={self.skill_id}, percent={self.percent})>"
+
+
+class QuizSkill(Base):
+    __tablename__ = "quiz_skills"
+    # percent is how much this quiz contributes to the given skill (0-100 scale).
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+    quiz_id = Column(UUID(as_uuid=True), ForeignKey("quizzes.id"), nullable=False, index=True)
+    skill_id = Column(UUID(as_uuid=True), ForeignKey("skills.id"), nullable=False, index=True)
+    percent = Column(Float, nullable=False)
+
+    quiz: Mapped[Quiz] = relationship("Quiz", backref=backref("quiz_skills", cascade="all, delete-orphan"))
+    skill: Mapped[Skill] = relationship("Skill", backref=backref("quiz_skills", cascade="all, delete-orphan"))
+
+    __table_args__ = (UniqueConstraint("quiz_id", "skill_id", name="uq_quiz_skill"),)
+
+    def __repr__(self):
+        return f"<QuizSkill(quiz={self.quiz_id}, skill={self.skill_id}, percent={self.percent})>"
 
 class Deadline(Base):
     __tablename__ = "deadlines"
