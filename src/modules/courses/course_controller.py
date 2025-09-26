@@ -17,19 +17,21 @@ router = APIRouter(prefix="/courses", tags=["courses"])
 @router.get("", response_model=List[schemas.CourseResponse])
 async def get_courses(
     q: Optional[str] = None,
+    track: Optional[str] = None,  # <-- new filter
     skip: int = 0,
     limit: int = 10,
-    db: AsyncSession = Depends(get_db_session)
+    db: AsyncSession = Depends(get_db_session),
 ):
     """
-    Retrieve courses with optional search filtering and pagination.
-    
+    Retrieve courses with optional search, track filtering, and pagination.
+
     Query Parameters:
-    - **q**: Optional search query to filter courses by title or description.
-    - **skip**: Number of records to skip for pagination.
+    - **q**: Optional search query (title or description).
+    - **track**: Optional track slug to filter by courses in that track.
+    - **skip**: Number of records to skip (pagination).
     - **limit**: Maximum number of records to return.
     """
-    courses = await course_service.get_all_courses(db, q, skip, limit)
+    courses = await course_service.get_all_courses(db, q, track, skip, limit)
     return courses
 
 # GET /courses/{course_id} - Retrieve course details by ID

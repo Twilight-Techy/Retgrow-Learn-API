@@ -7,36 +7,44 @@ from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import selectinload
-from src.models.models import Course, Lesson, Module, UserCourse, User
+from src.models.models import Course, Lesson, Module, Track, TrackCourse, UserCourse, User
 from src.modules.notifications.notification_service import create_notification
 
 # Retrieve all courses
-async def get_all_courses(db: AsyncSession, q: Optional[str] = None, skip: int = 0, limit: int = 10) -> List[Course]:
+async def get_all_courses(
+    db: AsyncSession,
+    q: Optional[str] = None,
+    track: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 10,
+) -> List[Course]:
     """
-    Retrieve courses from the database with optional search and pagination.
-    
-    Args:
-        db (AsyncSession): The database session.
-        q (Optional[str]): Optional search query to filter by title or description.
-        skip (int): Number of records to skip (for pagination).
-        limit (int): Maximum number of records to return.
-        
-    Returns:
-        List[Course]: A list of courses matching the criteria.
+    Retrieve courses with optional search, track filter, and pagination.
     """
+
+    query = select(Course)
+
+    # Search by q
     if q:
-        query = select(Course).where(
+        query = query.where(
             or_(
                 Course.title.ilike(f"%{q}%"),
-                Course.description.ilike(f"%{q}%")
+                Course.description.ilike(f"%{q}%"),
             )
-        ).offset(skip).limit(limit)
-    else:
-        query = select(Course).offset(skip).limit(limit)
-    
+        )
+
+    # Filter by track slug
+    if track:
+        query = (
+            query.join(Course.track_associations)
+            .join(TrackCourse.track)
+            .where(Track.slug == track)
+        )
+
+    query = query.offset(skip).limit(limit)
+
     result = await db.execute(query)
-    courses = result.scalars().all()
-    return courses
+    return result.scalars().all()
 
 # Retrieve a single course by ID
 async def get_course_by_id(course_id: str, db: AsyncSession) -> Optional[Course]:
