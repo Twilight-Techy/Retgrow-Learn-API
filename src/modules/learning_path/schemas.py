@@ -5,18 +5,6 @@ from typing import Optional, List
 from uuid import UUID
 from pydantic import BaseModel
 
-class LearningPathResponse(BaseModel):
-    id: UUID
-    user_id: UUID
-    track_id: UUID
-    current_course_id: UUID
-    progress: float
-    created_at: datetime
-    updated_at: datetime
-
-    class Config:
-        from_attributes = True
-
 class SkillResponse(BaseModel):
     id: UUID
     name: str
@@ -34,7 +22,7 @@ class UserSkillResponse(BaseModel):
         from_attributes = True
 
 class LearningPathEnrollRequest(BaseModel):
-    track_id: UUID  # The track the user wants to enroll in
+    track_id: str  # The track the user wants to enroll in
 
     class Config:
         from_attributes = True

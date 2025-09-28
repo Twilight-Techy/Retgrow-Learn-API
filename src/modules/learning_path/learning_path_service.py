@@ -50,7 +50,6 @@ async def enroll_in_track(user_id: str, track_id: str, db: AsyncSession):
     
     # Create a new learning path record.
     new_learning_path = LearningPath(
-        id=uuid.uuid4(),  # Omit if your model auto-generates this field.
         user_id=user_id,
         track_id=track_id,
         progress=0.0,
