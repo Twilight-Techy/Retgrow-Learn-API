@@ -46,12 +46,16 @@ async def get_all_courses(
     result = await db.execute(query)
     return result.scalars().all()
 
-# Retrieve a single course by ID
 async def get_course_by_id(course_id: str, db: AsyncSession) -> Optional[Course]:
-    stmt = select(Course).where(Course.id == course_id)
+    stmt = (
+        select(Course)
+        .options(
+            selectinload(Course.modules).selectinload(Module.lessons)
+        )
+        .where(Course.id == course_id)
+    )
     result = await db.execute(stmt)
-    course = result.scalars().first()
-    return course
+    return result.scalars().first()
 
 async def create_course(course_data: dict, db: AsyncSession) -> Course:
     """
@@ -318,3 +322,12 @@ async def check_and_mark_course_completion(user_id: str, course_id: str, db: Asy
             f"You have completed the course successfully!",
             db
         )
+
+async def get_enrollment_status(course_id: str, current_user: User, db: AsyncSession) -> Optional[UserCourse]:
+    result = await db.execute(
+        select(UserCourse).where(
+            (UserCourse.user_id == current_user.id) &
+            (UserCourse.course_id == course_id)
+        )
+    )
+    return result.scalars().first()

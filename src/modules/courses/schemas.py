@@ -131,3 +131,6 @@ class CourseDetailResponse(BaseModel):
 
 class EnrollmentResponse(BaseModel):
     message: str
+
+class EnrollmentStatusResponse(BaseModel):
+    is_enrolled: bool

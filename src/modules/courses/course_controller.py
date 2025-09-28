@@ -35,7 +35,7 @@ async def get_courses(
     return courses
 
 # GET /courses/{course_id} - Retrieve course details by ID
-@router.get("/{course_id}", response_model=schemas.CourseResponse)
+@router.get("/{course_id}", response_model=schemas.CourseDetailResponse)
 async def get_course(course_id: UUID, db: AsyncSession = Depends(get_db_session)):
     course = await course_service.get_course_by_id(course_id, db)
     if not course:
@@ -143,6 +143,15 @@ async def enroll_course(
     if not success:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User is already enrolled in this course"
+            detail="User is already enrolled in this course!"
         )
     return schemas.EnrollmentResponse(message="Enrollment successful.")
+    
+@router.get("/{course_id}/enrolled", response_model=schemas.EnrollmentStatusResponse)
+async def get_enrollment_status(
+    course_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session)
+):
+    enrollment = await course_service.get_enrollment_status(course_id, current_user, db)
+    return schemas.EnrollmentStatusResponse(is_enrolled=bool(enrollment))
