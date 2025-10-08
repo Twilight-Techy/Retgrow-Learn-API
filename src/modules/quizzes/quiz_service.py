@@ -3,6 +3,7 @@
 from typing import Any, Dict, List, Optional
 import uuid
 from sqlalchemy import and_, func
+from sqlalchemy.orm import selectinload
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timezone
@@ -199,8 +200,21 @@ async def get_user_relevant_quizzes(current_user, db: AsyncSession) -> List[Dict
     return result
 
 async def get_quiz_by_id(quiz_id: str, db: AsyncSession) -> Optional[Quiz]:
-    result = await db.execute(select(Quiz).where(Quiz.id == quiz_id))
+    """
+    Retrieve a quiz and its questions, ordered, and return a plain dict
+    that matches the QuizResponse schema (so the controller can return it
+    directly to FastAPI which will validate it against Pydantic).
+    """
+    stmt = (
+        select(Quiz)
+        .options(selectinload(Quiz.quiz_questions))   # eager load questions
+        .where(Quiz.id == quiz_id)
+    )
+    result = await db.execute(stmt)
     quiz = result.scalars().first()
+    if quiz and getattr(quiz, "quiz_questions", None):
+        # sort the relationship list in place by the 'order' attribute
+        quiz.quiz_questions.sort(key=lambda q: (q.order if q.order is not None else 0))
     return quiz
 
 async def submit_quiz(quiz_id: str, current_user: User, answers: List[int], db: AsyncSession) -> Optional[float]:

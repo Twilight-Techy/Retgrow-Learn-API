@@ -22,7 +22,7 @@ class QuizResponse(BaseModel):
     title: str
     description: Optional[str] = None
     time_limit: int  # in minutes
-    questions: List[QuizQuestionResponse] = []
+    quiz_questions: List[QuizQuestionResponse] = []
     created_at: datetime
     updated_at: datetime
 
