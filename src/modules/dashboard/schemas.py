@@ -30,8 +30,10 @@ class RecentResourceResponse(BaseModel):
 class DeadlineResponse(BaseModel):
     id: UUID
     title: str
-    description: str | None = None
+    description: Optional[str] = None
     due_date: datetime
+    course: Optional[str] = None
+    is_overdue: bool
 
     class Config:
         from_attributes = True

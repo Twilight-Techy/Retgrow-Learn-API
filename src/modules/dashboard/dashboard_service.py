@@ -53,20 +53,56 @@ async def get_recent_resources(user_id: str, db: AsyncSession, limit: int = 5):
     return resources
 
 # Service function to get upcoming deadlines.
-async def get_upcoming_deadlines(user_id: str, db: AsyncSession, limit: int = 10) -> List[Deadline]:
+async def get_upcoming_deadlines(user_id: str, db: AsyncSession, limit: int = 10) -> List[dict]:
+    """
+    Retrieve deadlines for the user's enrolled courses.
+    Includes deadlines in the past (marked as is_overdue=True) and future.
+    Results are ordered by due_date ascending (earliest first).
+    """
     enrolled_courses = await get_enrolled_courses(user_id, db)
-    course_ids = [course.id for course in enrolled_courses]
+
+    # Build course_ids robustly for both dicts and ORM objects
+    course_ids = []
+    for c in enrolled_courses:
+        if isinstance(c, dict):
+            course_ids.append(c.get("id"))
+        else:
+            course_ids.append(getattr(c, "id", None))
+    course_ids = [cid for cid in course_ids if cid]
+
     if not course_ids:
         return []
+
     now = datetime.now(timezone.utc)
+
     stmt = (
         select(Deadline)
-        .where(Deadline.course_id.in_(course_ids), Deadline.due_date >= now)
-        .order_by(Deadline.due_date.asc()).limit(limit)
+        .options(selectinload(Deadline.course))
+        .where(Deadline.course_id.in_(course_ids))
+        .order_by(Deadline.due_date.asc())
+        .limit(limit)
     )
+
     result = await db.execute(stmt)
     deadlines = result.scalars().all()
-    return deadlines
+
+    out = []
+    for d in deadlines:
+        is_overdue = False
+        try:
+            is_overdue = d.due_date is not None and d.due_date < now
+        except Exception:
+            is_overdue = False
+
+        out.append({
+            "id": str(d.id),
+            "title": d.title,
+            "description": d.description,
+            "due_date": d.due_date,              # datetime -> Pydantic will serialize to ISO
+            "course": d.course.title if getattr(d, "course", None) else None,
+            "is_overdue": is_overdue
+        })
+    return out
 
 # Service function to aggregate dashboard data.
 async def get_dashboard_data(user_id: str, db: AsyncSession) -> dict:
