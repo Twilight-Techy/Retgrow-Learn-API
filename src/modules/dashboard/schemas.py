@@ -12,18 +12,11 @@ from src.models.models import CourseLevel
 class EnrolledCourseResponse(BaseModel):
     id: UUID
     title: str
-    progress: float = 0.00  # Percentage of course completion
-    # description: str | None = None
-    # image_url: str | None = None
-    # level: CourseLevel
-    # duration: str | None = None
-    # price: float
+    progress: float = 0.00
 
     class Config:
         from_attributes = True
 
-# Reuse ResourceResponse from resources if available;
-# otherwise, define a minimal resource schema.
 class RecentResourceResponse(BaseModel):
     id: UUID
     title: str
@@ -34,7 +27,6 @@ class RecentResourceResponse(BaseModel):
     class Config:
         from_attributes = True
 
-# A simple deadline schema; in a real app this would come from a dedicated Deadline model.
 class DeadlineResponse(BaseModel):
     id: UUID
     title: str

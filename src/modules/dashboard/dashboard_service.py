@@ -1,6 +1,7 @@
 # src/dashboard/dashboard_service.py
 
-from typing import List
+from typing import List, Optional
+from sqlalchemy import func
 from sqlalchemy.future import select
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,16 +9,31 @@ from datetime import datetime, timedelta, timezone
 
 from src.models.models import LearningPath, TrackCourse, UserAchievement, UserCourse, Course, UserResource, Resource, Deadline
 
-# Service function to get enrolled courses for a user.
-async def get_enrolled_courses(user_id: str, db: AsyncSession) -> List[Course]:
-    # Query the UserCourse join table and retrieve related Course objects.
-    stmt = select(Course, UserCourse.progress).join(UserCourse, UserCourse.course_id == Course.id).where(UserCourse.user_id == user_id)
+async def get_enrolled_courses(user_id: str, db: AsyncSession) -> List[dict]:
+    """
+    Retrieve enrolled courses for a user with their progress.
+    Returns a list of dicts: { id, title, progress } matching EnrolledCourseResponse.
+    """
+    # join UserCourse to Course and pull progress
+    stmt = (
+        select(Course, UserCourse.progress)
+        .join(UserCourse, UserCourse.course_id == Course.id)
+        .where(UserCourse.user_id == user_id)
+        .order_by(func.coalesce(UserCourse.progress, 0).desc())
+    )
+
     result = await db.execute(stmt)
-    rows = result.scalars().all()
-    courses = []
+    rows = result.all()  # returns list of (Course, progress)
+
+    courses: List[dict] = []
     for course, progress in rows:
-        setattr(course, "progress", float(progress or 0))
-        courses.append(course)
+        courses.append({
+            "id": course.id,
+            "title": course.title,
+            # ensure float (and clamp if you want)
+            "progress": float(progress or 0.0)
+        })
+
     return courses
 
 # Service function to get recent resources for a user.
@@ -96,33 +112,47 @@ async def get_recent_achievements(user_id: str, db: AsyncSession, limit: int = 5
 
 async def get_progress_overview(user_id: str, db: AsyncSession, limit: int = 0) -> List[dict]:
     """
-    Calculate progress overview for the currently enrolled courses for a user.
-    - "Completed": courses with progress >= 100
-    - "Not Started": courses with progress == 0 (or <= 0)
-    - "In Progress": courses with progress > 0 and < 100
-    Returns percentages for each category.
+    Calculate progress overview for the user's enrolled courses:
+     - "Completed": progress >= 100
+     - "Not Started": progress <= 0
+     - "In Progress": 0 < progress < 100
+    Returns integer percentages that sum to 100.
     """
     result = await db.execute(select(UserCourse).where(UserCourse.user_id == user_id))
     courses = result.scalars().all()
     total = len(courses)
-    
-    # If the user isn't enrolled in any courses, return all zeros.
+
     if total == 0:
         return [
             {"name": "Completed", "value": 0},
             {"name": "In Progress", "value": 0},
             {"name": "Not Started", "value": 0},
         ]
-    
-    completed = sum(1 for course in courses if course.progress >= 100)
-    not_started = sum(1 for course in courses if course.progress <= 0)
+
+    completed = sum(1 for c in courses if (c.progress or 0) >= 100)
+    not_started = sum(1 for c in courses if (c.progress or 0) <= 0)
     in_progress = total - completed - not_started
-    
-    # Calculate percentages (rounding to the nearest integer).
-    completed_pct = round((completed / total) * 100)
-    in_progress_pct = round((in_progress / total) * 100)
-    not_started_pct = round((not_started / total) * 100)
-    
+
+    # Compute exact floats then integer percentages with rounding while ensuring sum == 100
+    def pct(count: int) -> float:
+        return (count / total) * 100.0
+
+    completed_f = pct(completed)
+    in_progress_f = pct(in_progress)
+    not_started_f = pct(not_started)
+
+    # Round the first two and compute last as remainder to guarantee sum==100
+    completed_pct = round(completed_f)
+    in_progress_pct = round(in_progress_f)
+    not_started_pct = 100 - (completed_pct + in_progress_pct)
+
+    # Edge-case guard: if rounding makes last negative (rare), clamp and adjust
+    if not_started_pct < 0:
+        # push negative into in_progress (or completed) proportionally — simple fallback:
+        not_started_pct = 0
+        # recompute in_progress_pct so sum = 100
+        in_progress_pct = 100 - completed_pct
+
     return [
         {"name": "Completed", "value": completed_pct},
         {"name": "In Progress", "value": in_progress_pct},

@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.modules.user import user_service, schemas
 from src.common.database.database import get_db_session
 from src.models.models import User
-from src.auth.dependencies import get_current_user  # Assumed to be implemented
+from src.auth.dependencies import get_current_user
 
 router = APIRouter(prefix="/user", tags=["user"])
 
@@ -18,14 +18,6 @@ async def get_profile(
     """
     Retrieve the profile for the currently authenticated user.
     """
-    # Optionally, you could re-fetch the user from the DB here using the session if needed.
-    # profile = await user_service.get_user_profile(current_user)
-    # if not profile:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_404_NOT_FOUND,
-    #         detail="User profile not found"
-    #     )
-    # return profile
     if not current_user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

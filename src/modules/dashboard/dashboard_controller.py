@@ -9,7 +9,7 @@ from src.common.database.database import get_db_session
 from src.auth.dependencies import get_current_user  # Assumes this is implemented
 from src.models.models import User
 
-router = APIRouter(prefix="/user", tags=["dashboard"])
+router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 # GET /user/dashboard – Aggregated dashboard data.
 @router.get("/dashboard", response_model=schemas.DashboardResponse)
