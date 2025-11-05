@@ -11,8 +11,8 @@ from src.models.models import User
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
-# GET /user/dashboard – Aggregated dashboard data.
-@router.get("/dashboard", response_model=schemas.DashboardResponse)
+# GET /dashboard/profile – Aggregated dashboard data.
+@router.get("/profile", response_model=schemas.DashboardResponse)
 async def get_dashboard(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
@@ -25,7 +25,7 @@ async def get_dashboard(
         )
     return data
 
-# GET /user/enrolled-courses – List enrolled courses.
+# GET /dashboard/enrolled-courses – List enrolled courses.
 @router.get("/enrolled-courses", response_model=List[schemas.EnrolledCourseResponse])
 async def get_enrolled_courses(
     current_user: User = Depends(get_current_user),
@@ -34,7 +34,7 @@ async def get_enrolled_courses(
     courses = await dashboard_service.get_enrolled_courses(str(current_user.id), db)
     return courses
 
-# GET /user/recent-resources – List recent resources.
+# GET /dashboard/recent-resources – List recent resources.
 @router.get("/recent-resources", response_model=List[schemas.RecentResourceResponse])
 async def get_recent_resources(
     current_user: User = Depends(get_current_user),
@@ -44,7 +44,7 @@ async def get_recent_resources(
     resources = await dashboard_service.get_recent_resources(str(current_user.id), db, limit=limit)
     return resources
 
-# GET /user/upcoming-deadlines – List upcoming deadlines.
+# GET /dashboard/upcoming-deadlines – List upcoming deadlines.
 @router.get("/upcoming-deadlines", response_model=List[schemas.DeadlineResponse])
 async def get_upcoming_deadlines(
     current_user: User = Depends(get_current_user),

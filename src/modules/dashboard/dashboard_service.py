@@ -1,6 +1,6 @@
 # src/dashboard/dashboard_service.py
 
-from typing import List, Optional
+from typing import Dict, List, Optional
 from sqlalchemy import func
 from sqlalchemy.future import select
 from sqlalchemy.orm import joinedload, selectinload
@@ -37,8 +37,11 @@ async def get_enrolled_courses(user_id: str, db: AsyncSession) -> List[dict]:
     return courses
 
 # Service function to get recent resources for a user.
-async def get_recent_resources(user_id: str, db: AsyncSession, limit: int = 5):
-    # join UserResource -> Resource, include Track info
+async def get_recent_resources(user_id: str, db: AsyncSession, limit: int = 5) -> List[Dict]:
+    """
+    Return recent resources accessed by user as plain dicts:
+    [{ id, title, type, url, track_title }]
+    """
     stmt = (
         select(Resource)
         .join(UserResource, UserResource.resource_id == Resource.id)
@@ -47,10 +50,20 @@ async def get_recent_resources(user_id: str, db: AsyncSession, limit: int = 5):
         .order_by(UserResource.last_accessed.desc())
         .limit(limit)
     )
-    res = await db.execute(stmt)
-    resources = res.scalars().all()
-    # Resource.track is available; Pydantic can read attributes (track.slug, track.title) if schema defines them.
-    return resources
+    result = await db.execute(stmt)
+    resources = result.scalars().all()
+
+    out = []
+    for r in resources:
+        out.append({
+            "id": str(r.id),
+            "title": r.title,
+            # r.type might be an enum; convert to string safely
+            "type": (r.type.value if hasattr(r.type, "value") else str(r.type)) if r.type is not None else None,
+            "url": r.url,
+            "track_title": (r.track.title if getattr(r, "track", None) else None)
+        })
+    return out
 
 # Service function to get upcoming deadlines.
 async def get_upcoming_deadlines(user_id: str, db: AsyncSession, limit: int = 10) -> List[dict]:

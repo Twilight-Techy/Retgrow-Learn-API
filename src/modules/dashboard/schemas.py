@@ -20,9 +20,10 @@ class EnrolledCourseResponse(BaseModel):
 class RecentResourceResponse(BaseModel):
     id: UUID
     title: str
-    description: str | None = None
+    description: Optional[str] = None
     type: str
     url: str
+    track_title: Optional[str] = None
 
     class Config:
         from_attributes = True
