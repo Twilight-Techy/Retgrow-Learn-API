@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List
+from typing import List, Optional
 
 from src.modules.dashboard import dashboard_service, schemas
 from src.common.database.database import get_db_session
@@ -95,3 +95,21 @@ async def get_recommended_courses(
     """
     recommended_courses = await dashboard_service.get_recommended_courses(str(current_user.id), db)
     return recommended_courses
+
+@router.get("/learning-path", response_model=Optional[schemas.LearningPathResponse])
+async def get_learning_path(
+    db: AsyncSession = Depends(get_db_session),
+    current_user = Depends(get_current_user),
+):
+    """
+    Return the user's active learning path (or null if none).
+    Includes the first few ordered courses for preview.
+    """
+    # current_user is your User SQLAlchemy model instance (from get_current_user dependency)
+    user_id = str(current_user.id)
+    lp = await dashboard_service.get_active_learning_path(user_id, db, course_limit=5)
+    if lp is None:
+        # return null body (FastAPI will serialize None)
+        return None
+    # Let Pydantic handle validation/serialization via response_model
+    return lp

@@ -269,3 +269,61 @@ async def get_recommended_courses(user_id: str, db: AsyncSession) -> List[Dict]:
         })
 
     return recommended
+
+async def get_active_learning_path(user_id: str, db: AsyncSession, course_limit: int = 5) -> Optional[dict]:
+    """
+    Return active learning path for the user (completed_at IS NULL).
+    Includes: learning path metadata, track brief, and the first `course_limit` courses
+    ordered by TrackCourse.order.
+    Returns None if no active learning path exists.
+    """
+    # 1. Load active learning path
+    lp_stmt = select(LearningPath).where(
+        LearningPath.user_id == user_id,
+        LearningPath.completed_at.is_(None)
+    ).options(selectinload(LearningPath.track))
+    lp_res = await db.execute(lp_stmt)
+    lp = lp_res.scalars().first()
+    if not lp:
+        return None
+
+    # 2. Load ordered TrackCourse -> Course rows for that track (limit)
+    tc_stmt = (
+        select(TrackCourse, Course)
+        .join(Course, TrackCourse.course_id == Course.id)
+        .where(TrackCourse.track_id == lp.track_id)
+        .order_by(TrackCourse.order.asc())
+        .limit(course_limit)
+    )
+    tc_res = await db.execute(tc_stmt)
+    rows = tc_res.all()  # list of (TrackCourse, Course)
+
+    courses = []
+    for _, course in rows:
+        courses.append({
+            "id": course.id,
+            "title": course.title,
+            "description": course.description,
+            "image_url": getattr(course, "image_url", None)
+        })
+
+    # 3. Build response dict (pydantic model will read from attributes if used)
+    resp = {
+        "id": lp.id,
+        "user_id": lp.user_id,
+        "track": {
+            "id": lp.track.id,
+            "slug": getattr(lp.track, "slug", None),
+            "title": lp.track.title,
+            "description": lp.track.description,
+            "image_url": getattr(lp.track, "image_url", None)
+        },
+        "current_course_id": lp.current_course_id,
+        "progress": float(lp.progress or 0.0),
+        "courses": courses,
+        "created_at": lp.created_at,
+        "updated_at": lp.updated_at,
+        "completed_at": lp.completed_at,
+    }
+
+    return resp

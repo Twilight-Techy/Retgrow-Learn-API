@@ -75,3 +75,36 @@ class CourseResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class CourseBrief(BaseModel):
+    id: UUID
+    title: str
+    description: Optional[str] = None
+    image_url: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class TrackBrief(BaseModel):
+    id: UUID
+    slug: Optional[str] = None
+    title: str
+    description: Optional[str] = None
+    image_url: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class LearningPathResponse(BaseModel):
+    id: UUID
+    user_id: UUID
+    track: TrackBrief
+    current_course_id: Optional[UUID] = None
+    progress: float
+    courses: List[CourseBrief] = []  # first N courses for preview (ordered)
+    created_at: datetime
+    updated_at: datetime
+    completed_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
