@@ -208,7 +208,7 @@ async def get_progress_overview(user_id: str, db: AsyncSession, limit: int = 0) 
         {"name": "Not Started", "value": not_started_pct},
     ]
 
-async def get_recommended_courses(user_id: str, db: AsyncSession) -> List[Course]:
+async def get_recommended_courses(user_id: str, db: AsyncSession) -> List[Dict]:
     """
     Returns recommended courses for the user based on their current track enrollment.
     The logic:
@@ -217,7 +217,7 @@ async def get_recommended_courses(user_id: str, db: AsyncSession) -> List[Course
       3. Retrieve courses the user is already enrolled in from UserCourse.
       4. Exclude already enrolled courses and return the remaining ones, sorted by TrackCourse.order.
     """
-    # 1. Get the active learning path for the user.
+   # 1) Active learning path
     lp_result = await db.execute(
         select(LearningPath).where(
             LearningPath.user_id == user_id,
@@ -227,37 +227,45 @@ async def get_recommended_courses(user_id: str, db: AsyncSession) -> List[Course
     learning_path = lp_result.scalars().first()
     if not learning_path:
         return []
-    
+
     track_id = learning_path.track_id
 
-    # 2. Retrieve all courses for the track using TrackCourse association.
-    tc_result = await db.execute(
-        select(TrackCourse)
+    # 2) Collect enrolled course ids
+    uc_result = await db.execute(
+        select(UserCourse.course_id).where(UserCourse.user_id == user_id)
+    )
+    enrolled_course_ids = {row[0] for row in uc_result.all()}
+
+    # 3) Get courses for the track (ordered by TrackCourse.order)
+    stmt = (
+        select(Course)
+        .join(TrackCourse, TrackCourse.course_id == Course.id)
         .where(TrackCourse.track_id == track_id)
         .order_by(TrackCourse.order.asc())
     )
-    track_course_records = tc_result.scalars().all()
-    # Build a set of all course IDs in the track and a mapping for ordering.
-    all_course_ids = {tc.course_id for tc in track_course_records}
-    order_map = {tc.course_id: tc.order for tc in track_course_records}
+    result = await db.execute(stmt)
+    courses_in_track = result.scalars().all()
 
-    # 3. Retrieve courses the user is already enrolled in.
-    uc_result = await db.execute(
-        select(UserCourse).where(UserCourse.user_id == user_id)
-    )
-    user_course_records = uc_result.scalars().all()
-    enrolled_course_ids = {uc.course_id for uc in user_course_records}
+    # 4) Build response list of dicts (filter out enrolled)
+    recommended = []
+    for c in courses_in_track:
+        if c.id in enrolled_course_ids:
+            continue
 
-    # 4. Recommended courses: courses in the track that the user is not enrolled in.
-    recommended_ids = list(all_course_ids - enrolled_course_ids)
-    if not recommended_ids:
-        return []
+        # Ensure you convert numeric/enum types to python types Pydantic likes.
+        # Pydantic will accept strings for enum fields too (it will coerce) but
+        # it's fine to pass the enum instance if course.level is an enum.
+        recommended.append({
+            "id": c.id,
+            "track_id": track_id,
+            "title": c.title,
+            "description": c.description,
+            "image_url": c.image_url,
+            "level": getattr(c, "level", None),  # enum instance or string; Pydantic will coerce
+            "duration": c.duration,
+            "price": float(c.price) if c.price is not None else 0.0,
+            "created_at": c.created_at,
+            "updated_at": c.updated_at,
+        })
 
-    # Retrieve the Course objects for the recommended_ids.
-    courses_result = await db.execute(
-        select(Course).where(Course.id.in_(recommended_ids))
-    )
-    recommended_courses = courses_result.scalars().all()
-    # Sort the courses by the order defined in the TrackCourse association.
-    recommended_courses.sort(key=lambda course: order_map.get(course.id, 0))
-    return recommended_courses
+    return recommended
