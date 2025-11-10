@@ -32,9 +32,21 @@ class QuizResponse(BaseModel):
 class QuizSubmissionRequest(BaseModel):
     answers: List[int]  # Each element is the index of the selected option for each question
 
+class QuizQuestionAnswerResponse(BaseModel):
+    question_id: UUID
+    correct_answer: int
+
+    class Config:
+        from_attributes = True
+
 class QuizSubmissionResponse(BaseModel):
     score: float
     message: str
+    # ordered list of correct answers (matching question order returned by the quiz)
+    correct_answers: List[QuizQuestionAnswerResponse]
+
+    class Config:
+        from_attributes = True
 
 class QuizCreateRequest(BaseModel):
     course_id: UUID

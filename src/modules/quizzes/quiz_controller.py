@@ -77,18 +77,30 @@ async def submit_quiz(
     db: AsyncSession = Depends(get_db_session)
 ):
     """
-    Submit answers for a quiz and receive a score.
-    
-    The `answers` field should contain a list of integers corresponding to the selected
-    option index for each question in order.
+    Submit answers for a quiz and receive a score and the correct answers for each question.
     """
-    score = await quiz_service.submit_quiz(quiz_id, current_user, submission.answers, db)
-    if score is None:
+    result = await quiz_service.submit_quiz(quiz_id, current_user, submission.answers, db)
+    if result is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Submission error: Check that the quiz exists and all questions have been answered."
         )
-    return schemas.QuizSubmissionResponse(score=score, message="Quiz submitted successfully.")
+
+    # result expected to be dict: { "score": float, "questions": [QuizQuestion, ...] }
+    score = result["score"]
+    questions = result["questions"]
+
+    # Build ordered list of correct answers (question_id + correct_answer)
+    correct_answers = [
+        {"question_id": q.id, "correct_answer": q.correct_answer}
+        for q in questions
+    ]
+
+    return schemas.QuizSubmissionResponse(
+        score=score,
+        message="Quiz submitted successfully.",
+        correct_answers=correct_answers
+    )
 
 @router.post("", response_model=schemas.QuizResponse)
 async def create_quiz(

@@ -217,13 +217,14 @@ async def get_quiz_by_id(quiz_id: str, db: AsyncSession) -> Optional[Quiz]:
         quiz.quiz_questions.sort(key=lambda q: (q.order if q.order is not None else 0))
     return quiz
 
-async def submit_quiz(quiz_id: str, current_user: User, answers: List[int], db: AsyncSession) -> Optional[float]:
+async def submit_quiz(quiz_id: str, current_user: User, answers: List[int], db: AsyncSession) -> Optional[dict]:
     """
-    Process quiz submission for the given quiz and user.
-    - Retrieve quiz questions ordered by their defined order.
-    - Compare the submitted answers with the correct answers.
-    - Compute a score as a percentage.
-    - Save the submission in the UserQuiz table.
+    Process quiz submission:
+      - Load ordered questions for the quiz.
+      - Compare submitted answers with correct_answer for each question.
+      - Compute the percentage score.
+      - Persist a UserQuiz record.
+      - Return {"score": score, "questions": questions} so controller can include correct answers.
     """
     # Retrieve quiz questions for the given quiz, ordered by the 'order' field.
     result = await db.execute(
@@ -251,7 +252,9 @@ async def submit_quiz(quiz_id: str, current_user: User, answers: List[int], db: 
     )
     db.add(new_submission)
     await db.commit()
-    return score
+
+    # Return the score and the ordered questions (so caller can extract correct answers)
+    return {"score": score, "questions": questions}
 
 async def create_quiz(quiz_data: dict, db: AsyncSession) -> Quiz:
     new_quiz = Quiz(
