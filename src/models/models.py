@@ -3,7 +3,7 @@ import uuid
 import enum
 
 from sqlalchemy import (
-    ARRAY, JSON, Boolean, Column, Float, ForeignKey, Integer, Numeric, String, Text, DateTime,
+    ARRAY, JSON, Boolean, CheckConstraint, Column, Float, ForeignKey, Index, Integer, Numeric, String, Text, DateTime,
     Enum as SAEnum, UniqueConstraint,
     func,
 )
@@ -338,23 +338,72 @@ class NotificationType(enum.Enum):
     INFO = "info"
     SUCCESS = "success"
     WARNING = "warning"
+    ERROR = "error"
 
 class Notification(Base):
     __tablename__ = "notifications"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
-    type = Column(SAEnum(NotificationType), nullable=False, default=NotificationType.INFO)
-    message = Column(Text, nullable=False)
-    read = Column(Boolean, nullable=False, default=False)
-    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
-    # Relationship: A Notification belongs to a User
-    user: Mapped[User] = relationship("User", backref=backref("notifications", cascade="all, delete-orphan"))
+    # The notification 'type' you requested (info / warning / success / error)
+    type = Column(SAEnum(NotificationType), nullable=False, default=NotificationType.INFO)
+
+    # Optional scoping: Only one of course_id | track_id | user_id may be set, or none (global).
+    course_id = Column(UUID(as_uuid=True), ForeignKey("courses.id"), nullable=True, index=True)
+    track_id = Column(UUID(as_uuid=True), ForeignKey("tracks.id"), nullable=True, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True)
+
+    # Content
+    title = Column(String(255), nullable=False)
+    message = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)  # optional admin id
+
+    # Prevent both course_id, track_id and user_id from being set simultaneously.
+    __table_args__ = (
+        CheckConstraint(
+            "NOT (course_id IS NOT NULL AND track_id IS NOT NULL) AND NOT (user_id IS NOT NULL AND (course_id IS NOT NULL OR track_id IS NOT NULL))",
+            name="chk_notification_single_scope"
+        ),
+        Index("check_notification_single_scope", "course_id", "track_id", "created_at"),
+    )
+
+    # Relationships
+    creator = relationship("User", backref=backref("created_notifications", cascade="all, delete-orphan"))
 
     def __repr__(self):
-        return (f"<Notification(id={self.id}, user_id={self.user_id}, "
-                f"type={self.type.value}, read={self.read}, created_at={self.created_at})>")
+        scope = (
+            f"course_id={self.course_id}" if self.course_id is not None else
+            f"track_id={self.track_id}" if self.track_id is not None else
+            f"user_id={self.user_id}" if self.user_id is not None else
+            "scope=None"
+        )
+
+        return (
+            f"<Notification(id={self.id}, {scope}, "
+            f"type={self.type.value}, created_at={self.created_at})>"
+        )
+
+class UserNotification(Base):
+    __tablename__ = "user_notifications"
+
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), primary_key=True, nullable=False)
+    last_read_at = Column(DateTime(timezone=True), nullable=True)   # optional timestamp cutoff
+    unread_notifications = Column(ARRAY(UUID(as_uuid=True)), nullable=False, default=list)  # array of notification ids
+
+    # optionally store unread_count denormalized if needed for super-fast badges
+    # unread_count = Column(Integer, nullable=False, default=0)
+
+    user = relationship("User", backref=backref("user_notification", uselist=False, cascade="all, delete-orphan"))
+
+    def __repr__(self):
+        unread_count = len(self.unread_notifications) if self.unread_notifications else 0
+
+        return (
+            f"<UserNotification(user_id={self.user_id}, "
+            f"last_read_at={self.last_read_at}, "
+            f"unread_count={unread_count})>"
+        )
 
 class Discussion(Base):
     __tablename__ = "discussions"
