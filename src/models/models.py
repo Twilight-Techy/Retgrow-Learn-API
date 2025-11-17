@@ -359,6 +359,25 @@ class Notification(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)  # optional admin id
 
+    # Relationships — explicit foreign_keys to remove ambiguity (there are two FK columns to users.id)
+    # 'creator' = the user that created the notification (created_by)
+    creator = relationship(
+        "User",
+        foreign_keys=[created_by],
+        backref=backref("created_notifications", cascade="all, delete-orphan")
+    )
+
+    # 'recipient' = the user the notification is scoped to (user_id). For global notifications this will be None.
+    recipient = relationship(
+        "User",
+        foreign_keys=[user_id],
+        backref=backref("notifications", cascade="all, delete-orphan")
+    )
+
+    # Optional convenience relationships
+    course = relationship("Course", foreign_keys=[course_id])
+    track = relationship("Track", foreign_keys=[track_id])
+
     # Prevent both course_id, track_id and user_id from being set simultaneously.
     __table_args__ = (
         CheckConstraint(
@@ -368,9 +387,6 @@ class Notification(Base):
         Index("check_notification_single_scope", "course_id", "track_id", "created_at"),
     )
 
-    # Relationships
-    creator = relationship("User", backref=backref("created_notifications", cascade="all, delete-orphan"))
-
     def __repr__(self):
         scope = (
             f"course_id={self.course_id}" if self.course_id is not None else
@@ -379,9 +395,11 @@ class Notification(Base):
             "scope=None"
         )
 
+        type = self.type.value if hasattr(self.type, "value") else str(self.type)
+
         return (
             f"<Notification(id={self.id}, {scope}, "
-            f"type={self.type.value}, created_at={self.created_at})>"
+            f"type={type}, created_at={self.created_at})>"
         )
 
 class UserNotification(Base):
@@ -394,7 +412,11 @@ class UserNotification(Base):
     # optionally store unread_count denormalized if needed for super-fast badges
     # unread_count = Column(Integer, nullable=False, default=0)
 
-    user = relationship("User", backref=backref("user_notification", uselist=False, cascade="all, delete-orphan"))
+    user = relationship(
+        "User",
+        foreign_keys=[user_id],
+        backref=backref("user_notification", uselist=False, cascade="all, delete-orphan")
+    )
 
     def __repr__(self):
         unread_count = len(self.unread_notifications) if self.unread_notifications else 0
