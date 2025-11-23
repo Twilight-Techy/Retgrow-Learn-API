@@ -1,27 +1,27 @@
 # src/learning_path/learning_path_service.py
 
-from typing import Optional, List
-import uuid
+from typing import List
+from sqlalchemy.orm import selectinload
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.models import LearningPath, UserSkill
 
-async def get_learning_path(user_id: str, db: AsyncSession) -> Optional[LearningPath]:
-    """
-    Retrieve the learning path for the given user.
-    """
-    result = await db.execute(select(LearningPath).where(LearningPath.user_id == user_id))
-    learning_path = result.scalars().first()
-    return learning_path
-
 async def get_user_skills(user_id: str, db: AsyncSession) -> List[UserSkill]:
     """
-    Retrieve all user skills for the given user.
+    Return list of UserSkill ORM objects with skill relationship loaded.
+    Each result will deserialize to UserSkillResponse (skill + proficiency + last_updated).
+    If no rows found, returns an empty list.
     """
-    result = await db.execute(select(UserSkill).where(UserSkill.user_id == user_id))
+    stmt = (
+        select(UserSkill)
+        .options(selectinload(UserSkill.skill))   # load Skill relationship
+        .where(UserSkill.user_id == user_id)
+        .order_by(UserSkill.last_updated.desc())
+    )
+    result = await db.execute(stmt)
     user_skills = result.scalars().all()
-    return user_skills
+    return user_skills or []
 
 async def enroll_in_track(user_id: str, track_id: str, db: AsyncSession):
     """

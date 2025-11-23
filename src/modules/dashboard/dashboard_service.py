@@ -270,31 +270,33 @@ async def get_recommended_courses(user_id: str, db: AsyncSession) -> List[Dict]:
 
     return recommended
 
-async def get_active_learning_path(user_id: str, db: AsyncSession, course_limit: int = 5) -> Optional[dict]:
+async def get_active_learning_path(user_id: str, db: AsyncSession, course_limit: Optional[int] = None) -> Optional[dict]:
     """
     Return active learning path for the user (completed_at IS NULL).
-    Includes: learning path metadata, track brief, and the first `course_limit` courses
-    ordered by TrackCourse.order.
-    Returns None if no active learning path exists.
+    Includes: learning path metadata, track brief, and courses ordered by TrackCourse.order.
+    If course_limit is None => return all courses for the track.
     """
-    # 1. Load active learning path
-    lp_stmt = select(LearningPath).where(
-        LearningPath.user_id == user_id,
-        LearningPath.completed_at.is_(None)
-    ).options(selectinload(LearningPath.track))
+    lp_stmt = (
+        select(LearningPath)
+        .where(LearningPath.user_id == user_id, LearningPath.completed_at.is_(None))
+        .options(selectinload(LearningPath.track))
+    )
     lp_res = await db.execute(lp_stmt)
     lp = lp_res.scalars().first()
     if not lp:
         return None
 
-    # 2. Load ordered TrackCourse -> Course rows for that track (limit)
+    # Build the base statement for TrackCourse -> Course (ordered)
     tc_stmt = (
         select(TrackCourse, Course)
         .join(Course, TrackCourse.course_id == Course.id)
         .where(TrackCourse.track_id == lp.track_id)
         .order_by(TrackCourse.order.asc())
-        .limit(course_limit)
     )
+
+    if course_limit is not None:
+        tc_stmt = tc_stmt.limit(course_limit)
+
     tc_res = await db.execute(tc_stmt)
     rows = tc_res.all()  # list of (TrackCourse, Course)
 
@@ -307,7 +309,6 @@ async def get_active_learning_path(user_id: str, db: AsyncSession, course_limit:
             "image_url": getattr(course, "image_url", None)
         })
 
-    # 3. Build response dict (pydantic model will read from attributes if used)
     resp = {
         "id": lp.id,
         "user_id": lp.user_id,

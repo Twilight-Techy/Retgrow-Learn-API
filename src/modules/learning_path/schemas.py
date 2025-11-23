@@ -15,7 +15,7 @@ class SkillResponse(BaseModel):
 
 class UserSkillResponse(BaseModel):
     skill: SkillResponse
-    proficiency: float
+    proficiency: float          # 0..100
     last_updated: datetime
 
     class Config:

@@ -11,32 +11,18 @@ from src.models.models import User
 
 router = APIRouter(prefix="/user", tags=["learning-path"])
 
-@router.get("/learning-path", response_model=schemas.LearningPathResponse)
-async def get_learning_path(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_session)
-):
-    """
-    Retrieve the learning path for the currently authenticated user.
-    """
-    learning_path = await learning_path_service.get_learning_path(str(current_user.id), db)
-    return learning_path
-
 @router.get("/skills", response_model=List[schemas.UserSkillResponse])
 async def get_user_skills(
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_session)
+    db: AsyncSession = Depends(get_db_session),
 ):
     """
-    Retrieve all skills for the currently authenticated user.
+    Retrieve all user skills (skill object + proficiency + last_updated).
+    Returns an empty list if the user has no skills.
     """
     user_skills = await learning_path_service.get_user_skills(str(current_user.id), db)
-    if not user_skills:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No skills found for this user."
-        )
-    return user_skills
+    # Ensure it's a list (service should return list already)
+    return user_skills or []
 
 @router.post("/enroll", response_model=schemas.LearningPathResponse)
 async def enroll_in_track(
