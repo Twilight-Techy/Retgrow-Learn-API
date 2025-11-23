@@ -1,5 +1,6 @@
 # src/user/user_service.py
 
+from sqlalchemy import func
 from sqlalchemy.future import select
 from src.models.models import Course, User, UserCourse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -40,6 +41,7 @@ async def get_user_progress(current_user: User, db: AsyncSession) -> dict:
         select(UserCourse, Course.title)
         .join(Course, UserCourse.course_id == Course.id)
         .where(UserCourse.user_id == current_user.id)
+        .order_by(func.coalesce(UserCourse.progress, 0).desc())
     )
     # The result now contains tuples of (UserCourse object, Course title)
     user_courses_with_titles = result.all()
