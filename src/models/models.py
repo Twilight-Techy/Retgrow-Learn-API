@@ -156,8 +156,13 @@ class Lesson(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     module_id = Column(UUID(as_uuid=True), ForeignKey("modules.id"), nullable=False, index=True)
     title = Column(String(255), nullable=False)
-    content = Column(Text, nullable=True)
+    
+    # store lesson content as JSON array of blocks (null allowed)
+    content = Column(JSON, nullable=True)
+
+    # optional legacy video_url (kept for compatibility)
     video_url = Column(String(255), nullable=True)
+
     order = Column(Integer, nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())

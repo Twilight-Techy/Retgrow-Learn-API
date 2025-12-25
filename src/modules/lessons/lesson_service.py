@@ -1,38 +1,43 @@
 # src/lessons/lesson_service.py
 
-from typing import List, Optional
+from datetime import datetime, timezone
+from typing import Dict, List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.future import select
-from sqlalchemy import and_
+from sqlalchemy import and_, asc
 
-from src.models.models import Lesson, Module, UserLesson, User
+from src.models.models import Lesson, Module, UserCourse, UserLesson, User
+
+async def is_user_enrolled_in_course(user_id: str, course_id: str, db: AsyncSession) -> bool:
+    stmt = select(UserCourse).where(
+        and_(
+            UserCourse.user_id == user_id,
+            UserCourse.course_id == course_id
+        )
+    )
+    result = await db.execute(stmt)
+    return result.scalars().first() is not None
 
 async def get_lessons_by_course(course_id: str, db: AsyncSession) -> List[Lesson]:
     """
     Retrieve all lessons for a given course.
-    
-    This query joins the Lesson and Module tables and filters by course_id.
     """
-    # Assuming each Lesson belongs to a Module and Module has a course_id field.
     stmt = (
         select(Lesson)
         .join(Module)
         .where(Module.course_id == course_id)
-        .order_by(Lesson.order)
+        .order_by(Module.order.asc(), Lesson.order.asc())
     )
     result = await db.execute(stmt)
     lessons = result.scalars().all()
     return lessons
 
-async def complete_lesson(course_id: str, lesson_id: str, current_user: User, db: AsyncSession) -> bool:
+
+async def get_lesson_in_course(course_id: str, lesson_id: str, db: AsyncSession) -> Optional[Lesson]:
     """
-    Mark a lesson as completed for the current user.
-    
-    First, verify that the lesson exists and belongs to the given course.
-    Then check if a completion record already exists in the UserLesson table.
-    If not, create a new record.
+    Retrieve a single lesson and ensure it belongs to the given course (via Module.course_id).
     """
-    # Verify that the lesson exists and is part of a module within the given course.
     stmt = (
         select(Lesson)
         .join(Module)
@@ -45,10 +50,33 @@ async def complete_lesson(course_id: str, lesson_id: str, current_user: User, db
     )
     result = await db.execute(stmt)
     lesson = result.scalars().first()
-    if not lesson:
-        return False  # Lesson not found or does not belong to the course
+    return lesson
 
-    # Check if the user has already completed the lesson.
+
+async def complete_lesson(course_id: str, lesson_id: str, current_user: User, db: AsyncSession) -> bool:
+    """
+    Mark a lesson as completed for the current user (idempotent).
+    Returns True on success (including when already completed), False on failure (e.g. not found or not enrolled).
+    """
+    # 1) Ensure lesson exists and belongs to the course
+    lesson = await get_lesson_in_course(course_id, lesson_id, db)
+    if not lesson:
+        return False
+
+    # 2) Ensure user is enrolled in the course
+    stmt = select(UserCourse).where(
+        and_(
+            UserCourse.user_id == current_user.id,
+            UserCourse.course_id == course_id
+        )
+    )
+    result = await db.execute(stmt)
+    enrolled = result.scalars().first()
+    if not enrolled:
+        # user not enrolled -> cannot complete
+        return False
+
+    # 3) If already completed, return True (idempotent)
     stmt = select(UserLesson).where(
         and_(
             UserLesson.user_id == current_user.id,
@@ -56,24 +84,24 @@ async def complete_lesson(course_id: str, lesson_id: str, current_user: User, db
         )
     )
     result = await db.execute(stmt)
-    existing_record = result.scalars().first()
-    if existing_record:
-        return False  # Already marked as completed
+    existing = result.scalars().first()
+    if existing:
+        return True
 
-    # Create a new UserLesson record.
-    new_completion = UserLesson(
-        user_id=current_user.id,
-        lesson_id=lesson_id
-    )
-    db.add(new_completion)
-    await db.commit()
-    return True
-
-async def get_lesson_by_id(lesson_id: str, db: AsyncSession) -> Optional[Lesson]:
-    stmt = select(Lesson).where(Lesson.id == lesson_id)
-    result = await db.execute(stmt)
-    lesson = result.scalars().first()
-    return lesson
+    # 4) Create completion record
+    try:
+        new_completion = UserLesson(
+            user_id=current_user.id,
+            lesson_id=lesson_id,
+            completed_at=datetime.now(timezone.utc)
+        )
+        db.add(new_completion)
+        await db.commit()
+        return True
+    except IntegrityError:
+        # race or duplicate -- treat as success (idempotent)
+        await db.rollback()
+        return True
 
 async def create_lesson(module_id: str, lesson_data: dict, db: AsyncSession) -> Lesson:
     """
@@ -95,7 +123,7 @@ async def update_lesson(lesson_id: str, lesson_data: dict, db: AsyncSession) -> 
     """
     Update an existing lesson.
     """
-    lesson = await get_lesson_by_id(lesson_id, db)
+    lesson = await get_lesson_in_course(lesson_id, db)
     if not lesson:
         return None
     for key, value in lesson_data.items():
@@ -104,3 +132,64 @@ async def update_lesson(lesson_id: str, lesson_data: dict, db: AsyncSession) -> 
     await db.commit()
     await db.refresh(lesson)
     return lesson
+
+async def get_last_or_first_lesson_for_user(course_id: str, user_id: str, db: AsyncSession) -> Optional[Dict]:
+    """
+    Return dict {"lesson_id": <uuid>}:
+      - If user has completed lessons in course, return most recently completed lesson (UserLesson.completed_at desc)
+      - Else return the first lesson in the course (module.order asc, lesson.order asc)
+      - If course has no lessons return None
+    Also ensure user is enrolled (UserCourse exists); if not, raise an exception upstream (we return None or raise here).
+    """
+
+    # 0) Ensure user is enrolled in the course
+    uc_stmt = select(UserCourse).where(
+        and_(
+            UserCourse.course_id == course_id,
+            UserCourse.user_id == user_id
+        )
+    )
+    uc_res = await db.execute(uc_stmt)
+    user_course = uc_res.scalars().first()
+    if not user_course:
+        # We choose to raise here by returning a special sentinel (controller maps to 403).
+        # But service can also raise. We'll return a sentinel to let controller return 403.
+        raise PermissionError("User not enrolled in course")
+
+    # 1) Try to find most recent completed lesson for this user within the course
+    # Join UserLesson -> Lesson -> Module (filter Module.course_id)
+    ul_stmt = (
+        select(UserLesson, Lesson)
+        .join(Lesson, UserLesson.lesson_id == Lesson.id)
+        .join(Module, Lesson.module_id == Module.id)
+        .where(
+            and_(
+                Module.course_id == course_id,
+                UserLesson.user_id == user_id
+            )
+        )
+        .order_by(UserLesson.completed_at.desc())
+        .limit(1)
+    )
+    ul_res = await db.execute(ul_stmt)
+    ul_row = ul_res.first()
+    if ul_row:
+        # ul_row = (UserLesson, Lesson)
+        _, lesson = ul_row
+        return {"lesson_id": lesson.id}
+
+    # 2) No completed lessons — find the first lesson in the course ordered by module.order then lesson.order
+    first_stmt = (
+        select(Lesson)
+        .join(Module, Lesson.module_id == Module.id)
+        .where(Module.course_id == course_id)
+        .order_by(asc(Module.order), asc(Lesson.order))
+        .limit(1)
+    )
+    first_res = await db.execute(first_stmt)
+    first_lesson = first_res.scalars().first()
+    if first_lesson:
+        return {"lesson_id": first_lesson.id}
+
+    # 3) Course has no lessons
+    return None

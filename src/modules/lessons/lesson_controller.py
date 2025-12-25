@@ -96,20 +96,33 @@ async def complete_lesson(
     return schemas.CompleteLessonResponse(message="Lesson marked as completed.")
 
 
-@router.get("/{lesson_id}", response_model=schemas.LessonResponse)
+# GET /courses/{course_id}/lessons/{lesson_id} - fetch single lesson (requires enrollment)
+@router.get("/{course_id}/lessons/{lesson_id}", response_model=schemas.LessonResponse)
 async def get_lesson(
+    course_id: UUID,
     lesson_id: UUID,
-    db: AsyncSession = Depends(get_db_session)
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session),
 ):
     """
-    Retrieve the details of a specific lesson by its ID.
+    Retrieve the details of a specific lesson in a course.
+    Requires the requesting user to be enrolled in the course.
     """
-    lesson = await lesson_service.get_lesson_by_id(lesson_id, db)
+    # verify enrollment
+    enrolled = await lesson_service.is_user_enrolled_in_course(str(current_user.id), str(course_id), db)
+    if not enrolled:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You must be enrolled in this course to access the lesson")
+    
+    # verify lesson exists and belongs to course
+    lesson = await lesson_service.get_lesson_in_course(str(course_id), str(lesson_id), db)
     if not lesson:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Lesson not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lesson not found")
+
+    # Optionally: mark as completed automatically when retrieved by the user.
+    # If you want "selection marks completion", call complete_lesson here (non-blocking).
+    success = await lesson_service.complete_lesson(str(course_id), str(lesson_id), current_user, db)
+    # success True/False is not used for response body, just side-effect.
+
     return lesson
 
 @router.post("/module/{module_id}", response_model=schemas.LessonResponse)
@@ -151,3 +164,22 @@ async def update_lesson(
             detail="Lesson not found"
         )
     return updated_lesson
+
+@router.get("/{course_id}/last-lesson", response_model=schemas.LastLessonResponse)
+async def get_last_lesson_for_user(
+    course_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session)
+):
+    """
+    Return the last completed lesson id for the current user in this course.
+    If the user hasn't completed any lesson return the first lesson id of the course.
+    Requires the user to be enrolled in the course (401/403 if not).
+    """
+    try:
+        res = await lesson_service.get_last_or_first_lesson_for_user(str(course_id), str(current_user.id), db)
+    except PermissionError:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are not enrolled in this course.")
+    if res is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No lessons found for this course.")
+    return res
