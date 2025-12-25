@@ -20,12 +20,13 @@ router = APIRouter(prefix="/courses", tags=["lessons"])
 @router.get("/{course_id}/lessons", response_model=List[schemas.LessonResponse])
 async def get_lessons(
     course_id: UUID,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
     """
     Retrieve all lessons for a course.
     """
-    lessons = await lesson_service.get_lessons_by_course(course_id, db)
+    lessons = await lesson_service.get_lessons_by_course(str(course_id), str(current_user.id), db)
     if not lessons:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -63,7 +64,7 @@ async def complete_lesson(
 
     # Now, check if the user has completed all lessons in the course.
     # Get all lessons for the course.
-    lessons = await lesson_service.get_lessons_by_course(course_id, db)
+    lessons = await lesson_service.get_lessons_by_course(str(course_id), str(current_user.id), db)
     total_lessons = len(lessons)
     # Extract the IDs of the lessons in this course.
     lesson_ids = [lesson.id for lesson in lessons]    

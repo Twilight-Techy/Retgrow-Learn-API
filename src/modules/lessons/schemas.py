@@ -7,11 +7,12 @@ from pydantic import BaseModel
 
 class LessonResponse(BaseModel):
     id: UUID
-    module_id: UUID
+    module_title: str
     title: str
     content: Optional[List[Any]] = None
     video_url: Optional[str] = None
     order: int
+    completed: bool = False
     created_at: datetime
     updated_at: datetime
 

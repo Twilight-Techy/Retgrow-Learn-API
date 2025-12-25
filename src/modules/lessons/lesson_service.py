@@ -19,18 +19,33 @@ async def is_user_enrolled_in_course(user_id: str, course_id: str, db: AsyncSess
     result = await db.execute(stmt)
     return result.scalars().first() is not None
 
-async def get_lessons_by_course(course_id: str, db: AsyncSession) -> List[Lesson]:
-    """
-    Retrieve all lessons for a given course.
-    """
+async def get_lessons_by_course(course_id: str, user_id: str, db: AsyncSession):
     stmt = (
-        select(Lesson)
+        select(
+            Lesson,
+            Module.title.label("module_title"),
+            UserLesson.id.isnot(None).label("completed"),
+        )
         .join(Module)
+        .outerjoin(
+            UserLesson,
+            and_(
+                UserLesson.lesson_id == Lesson.id,
+                UserLesson.user_id == user_id
+            )
+        )
         .where(Module.course_id == course_id)
         .order_by(Module.order.asc(), Lesson.order.asc())
     )
+
     result = await db.execute(stmt)
-    lessons = result.scalars().all()
+
+    lessons = []
+    for lesson, module_title, completed in result.all():
+        lesson.completed = completed
+        lesson.module_title = module_title  # attach dynamically
+        lessons.append(lesson)
+
     return lessons
 
 
