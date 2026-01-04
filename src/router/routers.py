@@ -13,6 +13,8 @@ from src.modules.learning_path.learning_path_controller import router as learnin
 from src.modules.lessons.lesson_controller import router as lesson_router
 from src.modules.modules.module_controller import router as module_router
 from src.modules.notifications.notification_controller import router as notification_router
+from src.modules.payments.payment_controller import router as payment_router
+from src.modules.payments.payment_controller import subscription_router
 from src.modules.quizzes.quiz_controller import router as quiz_router
 from src.modules.resources.resource_controller import router as resource_router
 from src.modules.search.search_controller import router as search_router
@@ -32,8 +34,11 @@ def include_routers(app: FastAPI) -> None:
     app.include_router(lesson_router)
     app.include_router(module_router)
     app.include_router(notification_router)
+    app.include_router(payment_router)
+    app.include_router(subscription_router)
     app.include_router(quiz_router)
     app.include_router(resource_router)
     app.include_router(search_router)
     app.include_router(track_router)
     app.include_router(user_router)
+

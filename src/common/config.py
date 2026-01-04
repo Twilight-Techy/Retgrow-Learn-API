@@ -35,6 +35,16 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str
     CONTACT_RECIPIENT: str
 
+    # Payment Provider Settings
+    PAYSTACK_SECRET_KEY: str = ""
+    PAYSTACK_PUBLIC_KEY: str = ""
+    OPAY_PUBLIC_KEY: str = ""
+    OPAY_SECRET_KEY: str = ""
+    OPAY_MERCHANT_ID: str = ""
+    OPAY_ENVIRONMENT: str = "sandbox"
+    STRIPE_SECRET_KEY: str = ""
+    STRIPE_WEBHOOK_SECRET: str = ""
+
     # Uncomment if you want to support comma-separated ALLOWED_ORIGINS strings
     @field_validator("ALLOWED_ORIGINS", mode="before")
     def split_origins(cls, value):

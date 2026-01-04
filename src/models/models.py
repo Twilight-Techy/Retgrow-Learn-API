@@ -593,3 +593,109 @@ class Deadline(Base):
 
     def __repr__(self):
         return f"<Deadline(id={self.id}, title={self.title}, due_date={self.due_date})>"
+
+
+# ==================== SUBSCRIPTION & PAYMENT MODELS ====================
+
+class SubscriptionPlan(enum.Enum):
+    FREE = "free"
+    FOCUSED = "focused"
+    PRO = "pro"
+
+class BillingCycle(enum.Enum):
+    MONTHLY = "monthly"
+    YEARLY = "yearly"
+
+class PaymentProvider(enum.Enum):
+    PAYSTACK = "paystack"
+    OPAY = "opay"
+    STRIPE = "stripe"
+
+class PaymentStatus(enum.Enum):
+    PENDING = "pending"
+    SUCCESS = "success"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+class SubscriptionStatus(enum.Enum):
+    ACTIVE = "active"
+    EXPIRED = "expired"
+    CANCELLED = "cancelled"
+    PENDING = "pending"
+
+
+class Subscription(Base):
+    """
+    Tracks user subscription to a plan.
+    """
+    __tablename__ = "subscriptions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    
+    plan = Column(SAEnum(SubscriptionPlan), nullable=False, default=SubscriptionPlan.FREE)
+    billing_cycle = Column(SAEnum(BillingCycle), nullable=True)  # Null for free plan
+    status = Column(SAEnum(SubscriptionStatus), nullable=False, default=SubscriptionStatus.ACTIVE)
+    
+    # Subscription period
+    start_date = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    end_date = Column(DateTime(timezone=True), nullable=True)  # Null for free plan (no expiry)
+    
+    # Payment info
+    payment_provider = Column(SAEnum(PaymentProvider), nullable=True)  # Null for free plan
+    external_subscription_id = Column(String(255), nullable=True)  # Provider's subscription ID
+    
+    # Auto-renewal settings
+    auto_renew = Column(Boolean, default=True, nullable=False)
+    
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, 
+                        server_default=func.now(), onupdate=func.now())
+
+    # Relationship to User
+    user: Mapped[User] = relationship("User", backref=backref("subscriptions", cascade="all, delete-orphan"))
+
+    def __repr__(self):
+        return (f"<Subscription(id={self.id}, user_id={self.user_id}, "
+                f"plan={self.plan.value}, status={self.status.value})>")
+
+
+class PaymentTransaction(Base):
+    """
+    Records all payment transactions for subscriptions.
+    """
+    __tablename__ = "payment_transactions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    subscription_id = Column(UUID(as_uuid=True), ForeignKey("subscriptions.id"), nullable=True, index=True)
+    
+    # Payment details
+    amount = Column(Numeric(10, 2), nullable=False)  # Amount in Naira
+    currency = Column(String(3), nullable=False, default="NGN")
+    
+    # Provider info
+    provider = Column(SAEnum(PaymentProvider), nullable=False)
+    reference = Column(String(255), unique=True, nullable=False, index=True)  # Our internal reference
+    external_reference = Column(String(255), nullable=True)  # Provider's reference (e.g., Paystack reference)
+    
+    # Status
+    status = Column(SAEnum(PaymentStatus), nullable=False, default=PaymentStatus.PENDING)
+    
+    # Plan info (for record-keeping)
+    plan = Column(SAEnum(SubscriptionPlan), nullable=False)
+    billing_cycle = Column(SAEnum(BillingCycle), nullable=False)
+    
+    # Payment metadata (stores provider-specific data)
+    payment_metadata = Column(JSON, nullable=True)
+    
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+
+    # Relationships
+    user: Mapped[User] = relationship("User", backref=backref("payment_transactions", cascade="all, delete-orphan"))
+    subscription: Mapped["Subscription"] = relationship("Subscription", backref=backref("transactions", cascade="all, delete-orphan"))
+
+    def __repr__(self):
+        return (f"<PaymentTransaction(id={self.id}, reference={self.reference}, "
+                f"amount={self.amount}, status={self.status.value})>")
