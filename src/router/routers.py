@@ -14,7 +14,7 @@ from src.modules.lessons.lesson_controller import router as lesson_router
 from src.modules.modules.module_controller import router as module_router
 from src.modules.notifications.notification_controller import router as notification_router
 from src.modules.payments.payment_controller import router as payment_router
-from src.modules.payments.payment_controller import subscription_router
+from src.modules.subscriptions.subscription_controller import router as subscription_router
 from src.modules.quizzes.quiz_controller import router as quiz_router
 from src.modules.resources.resource_controller import router as resource_router
 from src.modules.search.search_controller import router as search_router

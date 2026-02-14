@@ -23,7 +23,7 @@ from .providers.stripe_provider import StripeProvider
 
 
 router = APIRouter(prefix="/payments", tags=["payments"])
-subscription_router = APIRouter(prefix="/subscriptions", tags=["subscriptions"])
+
 
 
 # ==================== PAYMENT ENDPOINTS ====================
@@ -249,47 +249,4 @@ async def stripe_webhook(
     return {"status": "success"}
 
 
-# ==================== SUBSCRIPTION ENDPOINTS ====================
 
-@subscription_router.get("/current", response_model=SubscriptionResponse)
-async def get_current_subscription(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_session),
-):
-    """
-    Get the current user's active subscription.
-    
-    Creates a free subscription if none exists.
-    """
-    subscription = await payment_service.get_or_create_subscription(
-        user=current_user,
-        db=db,
-    )
-    
-    return subscription
-
-
-@subscription_router.post("/cancel")
-async def cancel_subscription(
-    request: CancelSubscriptionRequest,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_session),
-):
-    """
-    Cancel the current user's subscription.
-    
-    Access continues until the end of the current billing period.
-    """
-    try:
-        result = await payment_service.cancel_subscription(
-            user_id=current_user.id,
-            reason=request.reason,
-            db=db,
-        )
-        return result
-        
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        )

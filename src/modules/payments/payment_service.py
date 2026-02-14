@@ -23,6 +23,7 @@ from .providers.base import BasePaymentProvider
 from .providers.paystack import PaystackProvider
 from .providers.opay import OPayProvider
 from .providers.stripe_provider import StripeProvider
+from src.modules.subscriptions import subscription_service
 
 
 # Provider registry
@@ -108,6 +109,16 @@ async def initialize_payment(
     """
     if plan == SubscriptionPlan.FREE:
         raise ValueError("Cannot pay for free plan")
+
+    # Check current active subscription
+    current_subscription = await subscription_service.get_active_subscription(user.id, db)
+    if current_subscription and current_subscription.plan == plan and current_subscription.status == SubscriptionStatus.ACTIVE:
+        raise ValueError(f"You are already subscribed to {plan.value} plan")
+        
+    # Check current active subscription
+    current_subscription = await subscription_service.get_active_subscription(user.id, db)
+    if current_subscription and current_subscription.plan == plan and current_subscription.status == SubscriptionStatus.ACTIVE:
+        raise ValueError(f"You are already subscribed to {plan.value} plan")
     
     # Get amount for the plan
     amount = get_plan_amount(plan, billing_cycle)
@@ -220,28 +231,14 @@ async def verify_and_activate_subscription(
         }
         
         # Create or update subscription
-        subscription = await get_active_subscription(transaction.user_id, db)
-        
-        if subscription:
-            # Upgrade existing subscription
-            subscription.plan = transaction.plan
-            subscription.billing_cycle = transaction.billing_cycle
-            subscription.status = SubscriptionStatus.ACTIVE
-            subscription.start_date = datetime.utcnow()
-            subscription.end_date = calculate_end_date(transaction.billing_cycle)
-            subscription.payment_provider = transaction.provider
-        else:
-            # Create new subscription
-            subscription = Subscription(
-                user_id=transaction.user_id,
-                plan=transaction.plan,
-                billing_cycle=transaction.billing_cycle,
-                status=SubscriptionStatus.ACTIVE,
-                start_date=datetime.utcnow(),
-                end_date=calculate_end_date(transaction.billing_cycle),
-                payment_provider=transaction.provider,
-            )
-            db.add(subscription)
+        # Create new subscription record (handling cancellation of old one)
+        subscription = await subscription_service.create_new_subscription_record(
+            user_id=transaction.user_id,
+            plan=transaction.plan,
+            billing_cycle=transaction.billing_cycle,
+            provider=transaction.provider,
+            db=db
+        )
         
         # Link transaction to subscription
         await db.flush()
@@ -270,29 +267,3 @@ async def verify_and_activate_subscription(
             "status": PaymentStatus.FAILED,
             "message": verify_result.error_message or "Payment verification failed",
         }
-
-
-async def cancel_subscription(
-    user_id: uuid.UUID,
-    reason: Optional[str],
-    db: AsyncSession,
-) -> Dict[str, Any]:
-    """Cancel user's active subscription."""
-    subscription = await get_active_subscription(user_id, db)
-    
-    if not subscription:
-        raise ValueError("No active subscription found")
-    
-    if subscription.plan == SubscriptionPlan.FREE:
-        raise ValueError("Cannot cancel free plan")
-    
-    # Mark subscription as cancelled
-    subscription.status = SubscriptionStatus.CANCELLED
-    subscription.auto_renew = False
-    
-    await db.commit()
-    
-    return {
-        "message": "Subscription cancelled. Access continues until end of billing period.",
-        "end_date": subscription.end_date,
-    }
