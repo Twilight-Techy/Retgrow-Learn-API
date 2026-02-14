@@ -14,6 +14,8 @@ class ProfileResponse(BaseModel):
     bio: str | None = None
     avatar_url: str | None = None
     role: str
+    current_plan: Optional[str] = None
+    subscription_status: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
