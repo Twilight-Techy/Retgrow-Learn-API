@@ -6,8 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.future import select
 from sqlalchemy import and_, asc
+from sqlalchemy.orm import selectinload
 
-from src.models.models import Lesson, Module, UserCourse, UserLesson, User
+from src.models.models import Course, Lesson, Module, User, UserCourse, UserLesson
+from src.modules.subscriptions import access_control_service
 
 async def is_user_enrolled_in_course(user_id: str, course_id: str, db: AsyncSession) -> bool:
     stmt = select(UserCourse).where(
@@ -19,19 +21,21 @@ async def is_user_enrolled_in_course(user_id: str, course_id: str, db: AsyncSess
     result = await db.execute(stmt)
     return result.scalars().first() is not None
 
-async def get_lessons_by_course(course_id: str, user_id: str, db: AsyncSession):
+async def get_lessons_by_course(course_id: str, current_user: User, db: AsyncSession):
     stmt = (
         select(
             Lesson,
-            Module.title.label("module_title"),
+            Module,
+            Course,
             UserLesson.id.isnot(None).label("completed"),
         )
-        .join(Module)
+        .join(Module, Lesson.module_id == Module.id)
+        .join(Course, Module.course_id == Course.id)
         .outerjoin(
             UserLesson,
             and_(
                 UserLesson.lesson_id == Lesson.id,
-                UserLesson.user_id == user_id
+                UserLesson.user_id == current_user.id
             )
         )
         .where(Module.course_id == course_id)
@@ -41,9 +45,26 @@ async def get_lessons_by_course(course_id: str, user_id: str, db: AsyncSession):
     result = await db.execute(stmt)
 
     lessons = []
-    for lesson, module_title, completed in result.all():
+    # Result rows: (Lesson, Module, Course, completed)
+    for lesson, module, course, completed in result.all():
+        # Check access
+        has_access = await access_control_service.check_module_access(current_user, module, course, db)
+        
+        # We need to return Lesson objects with attached fields like 'module_title' and 'completed'
+        # and 'is_locked'.
+        # Since we are modifying the ORM object, we should be careful. 
+        # But this is a read operation and specific to this request.
+        
         lesson.completed = completed
-        lesson.module_title = module_title  # attach dynamically
+        lesson.module_title = module.title
+        
+        if not has_access:
+            lesson.content = None
+            lesson.video_url = None
+            lesson.is_locked = True
+        else:
+            lesson.is_locked = False
+            
         lessons.append(lesson)
 
     return lessons

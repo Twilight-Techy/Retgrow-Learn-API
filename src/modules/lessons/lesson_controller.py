@@ -26,7 +26,7 @@ async def get_lessons(
     """
     Retrieve all lessons for a course.
     """
-    lessons = await lesson_service.get_lessons_by_course(str(course_id), str(current_user.id), db)
+    lessons = await lesson_service.get_lessons_by_course(str(course_id), current_user, db)
     if not lessons:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -115,13 +115,18 @@ async def get_lesson(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You must be enrolled in this course to access the lesson")
     
     # verify lesson exists and belongs to course
-    lesson = await lesson_service.get_lesson_in_course(str(course_id), str(lesson_id), db)
+    try:
+        lesson = await lesson_service.get_lesson_in_course(str(course_id), str(lesson_id), db, current_user)
+    except PermissionError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+        
     if not lesson:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lesson not found")
 
     # Optionally: mark as completed automatically when retrieved by the user.
     # If you want "selection marks completion", call complete_lesson here (non-blocking).
-    success = await lesson_service.complete_lesson(str(course_id), str(lesson_id), current_user, db)
+    if lesson.content: # Only mark complete if they actually accessed the content (not just metadata)
+        success = await lesson_service.complete_lesson(str(course_id), str(lesson_id), current_user, db)
     # success True/False is not used for response body, just side-effect.
 
     return lesson

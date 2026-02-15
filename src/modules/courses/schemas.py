@@ -65,6 +65,7 @@ class LessonUpdateSchema(BaseModel):
 class ModuleCreateSchema(BaseModel):
     title: str
     order: int
+    is_free: bool = False
     lessons: List[LessonCreateSchema] = []
 
     class Config:
@@ -74,6 +75,7 @@ class ModuleUpdateSchema(BaseModel):
     id: UUID  # Required to identify which module to update
     title: Optional[str] = None
     order: Optional[int] = None
+    is_free: Optional[bool] = None
     lessons: Optional[List[LessonUpdateSchema]] = None
 
     class Config:
@@ -101,6 +103,7 @@ class LessonResponse(BaseModel):
     content: Optional[str] = None
     video_url: Optional[str] = None
     order: int
+    is_locked: bool = False
 
     class Config:
         from_attributes = True
@@ -109,6 +112,7 @@ class ModuleResponse(BaseModel):
     id: UUID
     title: str
     order: int
+    is_free: bool
     lessons: List[LessonResponse] = []
 
     class Config:

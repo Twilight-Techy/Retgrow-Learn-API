@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import selectinload
 from src.models.models import Course, Lesson, Module, Track, TrackCourse, UserCourse, User
 from src.modules.notifications.notification_service import create_notification
+from src.modules.subscriptions import access_control_service
 
 # Retrieve all courses
 async def get_all_courses(
@@ -92,6 +93,7 @@ async def create_course_with_content(course_data: dict, db: AsyncSession) -> Cou
         new_module = Module(
             title=module_data["title"],
             order=module_data["order"],
+            is_free=module_data.get("is_free", False),
             course=new_course # Associate module with the course
         )
         db.add(new_module)
@@ -171,9 +173,11 @@ async def update_course_with_content(course_id: str, course_data: dict, db: Asyn
 
             if existing_module:
                 # Check if module has changed
-                if (existing_module.title != module_data["title"]):
+                if (existing_module.title != module_data["title"] or 
+                    existing_module.is_free != module_data.get("is_free", False)):
                     module_changed = True
                     existing_module.title = module_data["title"]
+                    existing_module.is_free = module_data.get("is_free", False)
 
                 # Compare lessons
                 if "lessons" in module_data:
@@ -222,6 +226,7 @@ async def update_course_with_content(course_id: str, course_data: dict, db: Asyn
                 new_module = Module(
                     title=module_data["title"],
                     order=module_order,
+                    is_free=module_data.get("is_free", False),
                     course=course
                 )
                 db.add(new_module)
@@ -264,7 +269,7 @@ async def update_course_with_content(course_id: str, course_data: dict, db: Asyn
 
 
 # Retrieve course content: modules and their lessons
-async def get_course_content(course_id: str, db: AsyncSession) -> Optional[Course]:
+async def get_course_content(course_id: str, db: AsyncSession, current_user: Optional[User] = None) -> Optional[Course]:
     result = await db.execute(
         select(Course)
         .where(Course.id == course_id)
@@ -273,6 +278,33 @@ async def get_course_content(course_id: str, db: AsyncSession) -> Optional[Cours
         )
     )
     course = result.scalars().first()
+    
+    if not course:
+        return None
+
+    if current_user:
+        # Check permissions and redact content if necessary
+        # We need to set is_locked on lessons (which is not a DB field, so we attach it to the object or response)
+        # Since we are returning ORM objects, we can attach attributes that the Pydantic schema will pick up
+        # iff the Pydantic schema has those fields (we added is_locked to LessonResponse).
+        
+        # Note: Validating against ORM objects with extra fields can be tricky if they aren't in the model.
+        # But Pydantic's from_attributes usually ignores extra fields on the object unless defined in the model?
+        # Actually, we need to ensure the data passed to the response model has these fields.
+        # The cleanest way is to compute it here.
+        
+        for module in course.modules:
+            # Check module access
+            has_access = await access_control_service.check_module_access(current_user, module, course, db)
+            
+            for lesson in module.lessons:
+                if not has_access:
+                    lesson.content = None
+                    lesson.video_url = None
+                    lesson.is_locked = True
+                else:
+                    lesson.is_locked = False
+                    
     return course
 
 # Enroll the current user in a course
@@ -288,6 +320,20 @@ async def enroll_in_course(course_id: str, current_user: User, db: AsyncSession)
     if enrollment:
         # Already enrolled; no need to add again.
         return False
+
+    # Check eligibility
+    is_eligible = await access_control_service.check_enrollment_eligibility(current_user, result.scalars().first().course if enrollment else await get_course_by_id(course_id, db), db)
+    # Note: get_course_by_id fetches modules deeply, we might want a lighter fetch, 
+    # but check_enrollment_eligibility needs course.price and id.
+    # Let's fetch the course if we don't have it (we don't have it here yet unless we fetched it).
+    
+    course = await get_course_by_id(course_id, db)
+    if not course:
+        raise ValueError("Course not found")
+        
+    is_eligible = await access_control_service.check_enrollment_eligibility(current_user, course, db)
+    if not is_eligible:
+        raise PermissionError("You are not eligible to enroll in this course with your current plan.")
 
     # Create a new enrollment record
     new_enrollment = UserCourse(

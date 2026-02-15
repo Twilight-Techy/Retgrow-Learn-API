@@ -123,8 +123,12 @@ async def delete_course(
 
 # GET /courses/{course_id}/content - Retrieve detailed course content
 @router.get("/{course_id}/content", response_model=schemas.CourseDetailResponse)
-async def get_course_content(course_id: UUID, db: AsyncSession = Depends(get_db_session)):
-    course = await course_service.get_course_content(course_id, db)
+async def get_course_content(
+    course_id: UUID, 
+    db: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(get_current_user)
+):
+    course = await course_service.get_course_content(course_id, db, current_user)
     if not course:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -139,13 +143,24 @@ async def enroll_course(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
-    success = await course_service.enroll_in_course(course_id, current_user, db)
-    if not success:
+    try:
+        success = await course_service.enroll_in_course(course_id, current_user, db)
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User is already enrolled in this course!"
+            )
+        return schemas.EnrollmentResponse(message="Enrollment successful.")
+    except PermissionError as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User is already enrolled in this course!"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e)
         )
-    return schemas.EnrollmentResponse(message="Enrollment successful.")
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
     
 @router.get("/{course_id}/enrolled", response_model=schemas.EnrollmentStatusResponse)
 async def get_enrollment_status(
