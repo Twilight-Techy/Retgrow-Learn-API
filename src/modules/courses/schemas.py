@@ -1,7 +1,7 @@
 # src/courses/schemas.py
 
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Any
 from uuid import UUID
 from pydantic import BaseModel
 
@@ -100,10 +100,11 @@ class CourseUpdateWithContentRequest(CourseUpdateRequest):
 class LessonResponse(BaseModel):
     id: UUID
     title: str
-    content: Optional[str] = None
+    content: Optional[Any] = None
     video_url: Optional[str] = None
     order: int
     is_locked: bool = False
+    completed: bool = False
 
     class Config:
         from_attributes = True

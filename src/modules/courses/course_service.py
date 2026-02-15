@@ -7,7 +7,7 @@ from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import selectinload
-from src.models.models import Course, Lesson, Module, Track, TrackCourse, UserCourse, User
+from src.models.models import Course, Lesson, Module, Track, TrackCourse, UserCourse, User, UserLesson
 from src.modules.notifications.notification_service import create_notification
 from src.modules.subscriptions import access_control_service
 
@@ -284,20 +284,29 @@ async def get_course_content(course_id: str, db: AsyncSession, current_user: Opt
 
     if current_user:
         # Check permissions and redact content if necessary
-        # We need to set is_locked on lessons (which is not a DB field, so we attach it to the object or response)
-        # Since we are returning ORM objects, we can attach attributes that the Pydantic schema will pick up
-        # iff the Pydantic schema has those fields (we added is_locked to LessonResponse).
         
-        # Note: Validating against ORM objects with extra fields can be tricky if they aren't in the model.
-        # But Pydantic's from_attributes usually ignores extra fields on the object unless defined in the model?
-        # Actually, we need to ensure the data passed to the response model has these fields.
-        # The cleanest way is to compute it here.
-        
+        # optimized: fetch all completed lesson IDs for this course & user
+        completed_lesson_ids = set()
+        stmt = (
+            select(UserLesson.lesson_id)
+            .join(Lesson, UserLesson.lesson_id == Lesson.id)
+            .join(Module, Lesson.module_id == Module.id)
+            .where(
+                Module.course_id == course_id,
+                UserLesson.user_id == current_user.id
+            )
+        )
+        res = await db.execute(stmt)
+        completed_lesson_ids = set(res.scalars().all())
+
         for module in course.modules:
             # Check module access
             has_access = await access_control_service.check_module_access(current_user, module, course, db)
             
             for lesson in module.lessons:
+                # Set completion status
+                lesson.completed = lesson.id in completed_lesson_ids
+
                 if not has_access:
                     lesson.content = None
                     lesson.video_url = None
@@ -322,11 +331,6 @@ async def enroll_in_course(course_id: str, current_user: User, db: AsyncSession)
         return False
 
     # Check eligibility
-    is_eligible = await access_control_service.check_enrollment_eligibility(current_user, result.scalars().first().course if enrollment else await get_course_by_id(course_id, db), db)
-    # Note: get_course_by_id fetches modules deeply, we might want a lighter fetch, 
-    # but check_enrollment_eligibility needs course.price and id.
-    # Let's fetch the course if we don't have it (we don't have it here yet unless we fetched it).
-    
     course = await get_course_by_id(course_id, db)
     if not course:
         raise ValueError("Course not found")
