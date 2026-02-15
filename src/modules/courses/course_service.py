@@ -372,6 +372,30 @@ async def check_and_mark_course_completion(user_id: str, course_id: str, db: Asy
             f"You have completed the course successfully!",
             db
         )
+        
+        # Try to generate certificate (logic inside will check eligibility)
+        from src.modules.certificates import certificate_service
+        # We need the user and course objects.
+        # We have enrollment.user which might be lazy loaded or not?
+        # enrollment is UserCourse. user_id is available.
+        # Let's fetch user if needed, or pass id if service accepted id, but service takes User object.
+        # enrollment.user is reliable if we assume standard ORM or we can fetch.
+        # Actually user_id is passed to this function.
+        # Let's fetch the user to be safe and pass to service.
+        user_res = await db.execute(select(User).where(User.id == user_id))
+        user = user_res.scalars().first()
+        
+        course_res = await db.execute(select(Course).where(Course.id == course_id))
+        course = course_res.scalars().first()
+        
+        if user and course:
+            try:
+                await certificate_service.generate_certificate(user, course, db)
+            except Exception as e:
+                print(f"Error generating certificate: {e}")
+                # Don't fail the completion if cert generation fails?
+                # Maybe log it. For now print is fine or use logger if available.
+                pass
 
 async def get_enrollment_status(course_id: str, current_user: User, db: AsyncSession) -> Optional[UserCourse]:
     result = await db.execute(

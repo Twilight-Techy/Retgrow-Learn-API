@@ -596,6 +596,24 @@ class Deadline(Base):
         return f"<Deadline(id={self.id}, title={self.title}, due_date={self.due_date})>"
 
 
+class Certificate(Base):
+    __tablename__ = "certificates"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    course_id = Column(UUID(as_uuid=True), ForeignKey("courses.id"), nullable=False, index=True)
+    certificate_url = Column(String(500), nullable=True) # URL from Vercel Blob
+    issued_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    
+    # Relationships
+    user: Mapped[User] = relationship("User", backref=backref("certificates", cascade="all, delete-orphan"))
+    course: Mapped[Course] = relationship("Course", backref=backref("certificates", cascade="all, delete-orphan"))
+
+    __table_args__ = (UniqueConstraint("user_id", "course_id", name="uq_user_course_certificate"),)
+
+    def __repr__(self):
+        return f"<Certificate(id={self.id}, user_id={self.user_id}, course_id={self.course_id})>"
+
 # ==================== SUBSCRIPTION & PAYMENT MODELS ====================
 
 class SubscriptionPlan(enum.Enum):

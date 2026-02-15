@@ -20,10 +20,12 @@ from src.modules.resources.resource_controller import router as resource_router
 from src.modules.search.search_controller import router as search_router
 from src.modules.tracks.track_controller import router as track_router
 from src.modules.user.user_controller import router as user_router
+from src.modules.certificates.certificate_controller import router as certificate_router
 
 def include_routers(app: FastAPI) -> None:
     app.include_router(auth_router)
     app.include_router(achievements_router)
+    app.include_router(certificate_router)
     app.include_router(contact_router)
     app.include_router(course_router)
     app.include_router(dashboard_router)
