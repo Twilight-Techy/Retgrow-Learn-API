@@ -104,3 +104,11 @@ async def check_module_access(user: User, module: Module, course: Course, db: As
                 return True
                 
     return False
+
+async def check_skills_access(user: User, db: AsyncSession) -> bool:
+    """
+    Check if a user can access skills tracking.
+    Only FOCUSED and PRO plans have access.
+    """
+    plan = await _get_user_plan(user, db)
+    return plan in [SubscriptionPlan.FOCUSED, SubscriptionPlan.PRO]

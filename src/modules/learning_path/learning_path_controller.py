@@ -20,6 +20,14 @@ async def get_user_skills(
     Retrieve all user skills (skill object + proficiency + last_updated).
     Returns an empty list if the user has no skills.
     """
+    # Check eligibility via access_control_service
+    from src.modules.subscriptions import access_control_service
+    if not await access_control_service.check_skills_access(current_user, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Skills tracking is available for Focused and Pro users only."
+        )
+
     user_skills = await learning_path_service.get_user_skills(str(current_user.id), db)
     # Ensure it's a list (service should return list already)
     return user_skills or []
