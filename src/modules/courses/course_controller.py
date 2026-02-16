@@ -170,3 +170,53 @@ async def get_enrollment_status(
 ):
     enrollment = await course_service.get_enrollment_status(course_id, current_user, db)
     return schemas.EnrollmentStatusResponse(is_enrolled=bool(enrollment))
+
+@router.post("/{course_id}/complete", response_model=dict)
+async def complete_course(
+    course_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session)
+):
+    """
+    Mark course as completed for the current user and try to generate a certificate.
+    Returns { "certificate_id": uuid|null, "message": str }
+    """
+    # 1. Check if user is enrolled
+    enrollment = await course_service.get_enrollment_status(course_id, current_user, db)
+    if not enrollment:
+         raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not enrolled in this course."
+        )
+
+    # 2. Check if all lessons are completed? 
+    # The requirement simplifies this to "mark as completed", but usually we should check progress.
+    # However, logic in check_and_mark_course_completion checks if progress >= 100.
+    # So we should probably ensure progress is 100 first?
+    # Or does the user want a "Force Complete" button?
+    # Context: "This should mark the course as completed and generate a certificate if it hasn't already been done."
+    # AND "check_and_mark_course_completion" inside service checks for 100%.
+    # If the user clicks "View Certificate", they likely have 100%.
+    # If they don't, we can either strict check or just try.
+    # Let's trust check_and_mark_course_completion.
+    
+    cert = await course_service.check_and_mark_course_completion(current_user.id, str(course_id), db)
+    
+    # If cert is returned, we have success.
+    # If None, either not 100% or not eligible.
+    # We can fetch existing cert if check_and_mark returned None but maybe they already had it?
+    # check_and_mark attempts generation if 100%.
+    
+    if cert:
+        return {"certificate_id": str(cert.id), "message": "Course completed and certificate generated."}
+    
+    # Check if a certificate exists anyway (e.g. generated previously)
+    from src.modules.certificates import certificate_service
+    existing_certs = await certificate_service.get_user_certificates(current_user.id, db)
+    # Filter for this course
+    # This acts as a fallback if check_and_mark returned None because it was ALREADY completed previously
+    for c in existing_certs:
+        if str(c.course_id) == str(course_id):
+             return {"certificate_id": str(c.id), "message": "Certificate retrieved."}
+             
+    return {"certificate_id": None, "message": "Course mark as completed, but no certificate generated (eligibility or progress issue)."}

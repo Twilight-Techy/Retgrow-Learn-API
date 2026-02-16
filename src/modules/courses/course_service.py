@@ -7,7 +7,7 @@ from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import selectinload
-from src.models.models import Course, Lesson, Module, Track, TrackCourse, UserCourse, User, UserLesson
+from src.models.models import Course, Lesson, Module, Track, TrackCourse, UserCourse, User, UserLesson, Certificate
 from src.modules.notifications.notification_service import create_notification
 from src.modules.subscriptions import access_control_service
 
@@ -349,10 +349,11 @@ async def enroll_in_course(course_id: str, current_user: User, db: AsyncSession)
     await db.commit()
     return True
 
-async def check_and_mark_course_completion(user_id: str, course_id: str, db: AsyncSession) -> None:
+async def check_and_mark_course_completion(user_id: str, course_id: str, db: AsyncSession) -> Optional[Certificate]:
     """
     Check if the user's enrollment in the specified course has reached 100% progress.
     If so, mark the course as completed and send a notification.
+    Returns the generated certificate if eligible and successful.
     """
     result = await db.execute(
         select(UserCourse).where(
@@ -361,27 +362,24 @@ async def check_and_mark_course_completion(user_id: str, course_id: str, db: Asy
         )
     )
     enrollment = result.scalars().first()
-    if enrollment and enrollment.progress >= 100 and enrollment.completed_at is None:
-        enrollment.completed_at = datetime.now(timezone.utc)
-        db.add(enrollment)
-        await db.commit()
-        # Send notification that the course is completed.
-        await create_notification(
-            user_id,
-            "Course Completed",
-            f"You have completed the course successfully!",
-            db
-        )
+    
+    # If already completed or just completed
+    if enrollment and enrollment.progress >= 100:
+        if enrollment.completed_at is None:
+            enrollment.completed_at = datetime.now(timezone.utc)
+            db.add(enrollment)
+            await db.commit()
+            # Send notification that the course is completed.
+            await create_notification(
+                user_id,
+                "Course Completed",
+                f"You have completed the course successfully!",
+                db
+            )
         
         # Try to generate certificate (logic inside will check eligibility)
         from src.modules.certificates import certificate_service
-        # We need the user and course objects.
-        # We have enrollment.user which might be lazy loaded or not?
-        # enrollment is UserCourse. user_id is available.
-        # Let's fetch user if needed, or pass id if service accepted id, but service takes User object.
-        # enrollment.user is reliable if we assume standard ORM or we can fetch.
-        # Actually user_id is passed to this function.
-        # Let's fetch the user to be safe and pass to service.
+        
         user_res = await db.execute(select(User).where(User.id == user_id))
         user = user_res.scalars().first()
         
@@ -390,12 +388,13 @@ async def check_and_mark_course_completion(user_id: str, course_id: str, db: Asy
         
         if user and course:
             try:
-                await certificate_service.generate_certificate(user, course, db)
+                cert = await certificate_service.generate_certificate(user, course, db)
+                return cert
             except Exception as e:
                 print(f"Error generating certificate: {e}")
                 # Don't fail the completion if cert generation fails?
-                # Maybe log it. For now print is fine or use logger if available.
-                pass
+                return None
+    return None
 
 async def get_enrollment_status(course_id: str, current_user: User, db: AsyncSession) -> Optional[UserCourse]:
     result = await db.execute(
