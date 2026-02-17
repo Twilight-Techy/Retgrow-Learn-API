@@ -32,24 +32,16 @@ async def check_enrollment_eligibility(user: User, course: Course, db: AsyncSess
         return True
         
     # 2. Check Learning Path
-    # We need to check if this course is in the user's active learning path.
-    # Assuming user.learning_path is loaded or we fetch it.
-    # For now, let's fetch the learning path if not available on user object
-    # Note: The User model has `learning_path` relationship (uselist=False).
+    # Query LearningPath explicitly to avoid lazy load error
+    from sqlalchemy import select
+    from src.models.models import TrackCourse, LearningPath
     
-    # If the user has a learning path, check if the course is in it.
-    # We might need to query TrackCourse to see if course is in Track.
-    if user.learning_path:
-        track_id = user.learning_path.track_id
-        # We need to check if course is in this track.
-        # This requires a query or checking associations if loaded.
-        # Let's assume we can check via relationships if loaded, otherwise query.
-        
-        # Optimization: Pass a flag or check DB
-        # For simplicity and robustness, let's query if course is in track.
-        from sqlalchemy import select
-        from src.models.models import TrackCourse
-        
+    lp_result = await db.execute(select(LearningPath).where(LearningPath.user_id == user.id))
+    learning_path = lp_result.scalars().first()
+    
+    if learning_path:
+        track_id = learning_path.track_id
+        # Check if course is in this track
         result = await db.execute(
             select(TrackCourse).where(
                 TrackCourse.track_id == track_id,
@@ -90,10 +82,15 @@ async def check_module_access(user: User, module: Module, course: Course, db: As
         
     if plan == SubscriptionPlan.FOCUSED:
         # Check if course is in learning path
-        if user.learning_path:
-            track_id = user.learning_path.track_id
-            from sqlalchemy import select
-            from src.models.models import TrackCourse
+        # Explicitly query learning path to avoid lazy load error
+        from src.models.models import LearningPath, TrackCourse
+        from sqlalchemy import select
+        
+        lp_result = await db.execute(select(LearningPath).where(LearningPath.user_id == user.id))
+        learning_path = lp_result.scalars().first()
+        
+        if learning_path:
+            track_id = learning_path.track_id
             result = await db.execute(
                 select(TrackCourse).where(
                     TrackCourse.track_id == track_id,
