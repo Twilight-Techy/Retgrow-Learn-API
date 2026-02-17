@@ -8,6 +8,7 @@ from typing import List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.exc import IntegrityError
 from fastapi import UploadFile
 
 from sqlalchemy.orm import selectinload
@@ -91,6 +92,7 @@ async def generate_certificate(user: User, course: Course, db: AsyncSession) -> 
     if not blob_url:
         raise Exception("Failed to upload certificate to storage.")
 
+    print(f"DEBUG: Generating certificate for User {user.id}, Course {course.id}")
     new_cert = Certificate(
         user_id=user.id,
         course_id=course.id,
@@ -98,8 +100,32 @@ async def generate_certificate(user: User, course: Course, db: AsyncSession) -> 
         issued_at=datetime.utcnow()
     )
     db.add(new_cert)
-    await db.commit()
-    await db.refresh(new_cert)
+    try:
+        await db.commit()
+        await db.refresh(new_cert)
+        print(f"DEBUG: Certificate saved to DB: {new_cert.id}")
+    except IntegrityError:
+        # If unique constraint violated (race condition), return the existing one
+        await db.rollback()
+        print(f"DEBUG: IntegrityError - certificate likely exists. Fetching existing.")
+        
+        stmt = select(Certificate).where(
+            Certificate.user_id == user.id,
+            Certificate.course_id == course.id
+        )
+        result = await db.execute(stmt)
+        existing_cert = result.scalars().first()
+        if existing_cert:
+            return existing_cert
+        else:
+            # Should not happen if IntegrityError was due to duplicate
+            print("DEBUG: IntegrityError caught but no existing certificate found?")
+            return None
+            
+    except Exception as e:
+        print(f"DEBUG: Failed to save certificate to DB: {e}")
+        await db.rollback()
+        raise e
     
     return new_cert
 
@@ -287,7 +313,7 @@ async def _create_certificate_pdf(user: User, course: Course) -> bytes:
     c.setFont(DATE_FONT, 14)
     c.setFillColor(MEDIUM_GRAY)
     date_str = datetime.utcnow().strftime("%B %d, %Y")
-    c.drawCentredString(mid_x, current_y, f"on {date_str},")
+    c.drawCentredString(mid_x, current_y, f"on {date_str}.")
 
     # -----------------------------------------------------------
     # Footer: Signature (Left) and Seal (Right)
@@ -345,7 +371,7 @@ async def _upload_to_blob(file_data: bytes, filename: str) -> Optional[str]:
         "x-api-version": "1",
     }
     
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=60.0) as client:
         try:
             response = await client.put(url, content=file_data, headers=headers)
             
@@ -356,5 +382,8 @@ async def _upload_to_blob(file_data: bytes, filename: str) -> Optional[str]:
                 print(f"Blob upload failed: {response.status_code} {response.text}")
                 raise Exception(f"Blob upload failed: {response.text}")
         except Exception as e:
-            print(f"Blob upload error: {e}")
+            print(f"Blob upload error type: {type(e)}")
+            print(f"Blob upload error repr: {repr(e)}")
+            import traceback
+            traceback.print_exc()
             raise e
