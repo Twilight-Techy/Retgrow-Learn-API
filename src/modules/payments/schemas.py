@@ -25,15 +25,24 @@ class InitializePaymentRequest(BaseModel):
     provider: PaymentProvider
     callback_url: Optional[str] = None  # Override default callback URL
 
+    class Config:
+        from_attributes = True
+
 
 class VerifyPaymentRequest(BaseModel):
     """Request to verify a payment."""
     reference: str
 
+    class Config:
+        from_attributes = True
+
 
 class CancelSubscriptionRequest(BaseModel):
     """Request to cancel subscription."""
     reason: Optional[str] = None
+
+    class Config:
+        from_attributes = True
 
 
 # ==================== RESPONSE SCHEMAS ====================
@@ -46,6 +55,9 @@ class InitializePaymentResponse(BaseModel):
     amount: Decimal
     currency: str = "NGN"
 
+    class Config:
+        from_attributes = True
+
 
 class PaymentVerificationResponse(BaseModel):
     """Response after verifying a payment."""
@@ -56,6 +68,9 @@ class PaymentVerificationResponse(BaseModel):
     plan: SubscriptionPlan
     billing_cycle: BillingCycle
     message: str
+
+    class Config:
+        from_attributes = True
 
 
 class SubscriptionResponse(BaseModel):
@@ -98,6 +113,9 @@ class PlanPricing(BaseModel):
     monthly_price: Decimal  # In Naira
     yearly_price: Decimal   # In Naira
     currency: str = "NGN"
+
+    class Config:
+        from_attributes = True
 
 
 # Pricing configuration (can be moved to config/settings later)

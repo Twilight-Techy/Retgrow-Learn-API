@@ -213,6 +213,8 @@ async def verify_and_activate_subscription(
         return {
             "reference": reference,
             "status": transaction.status,
+            "plan": transaction.plan,
+            "billing_cycle": transaction.billing_cycle,
             "message": "Transaction already processed",
         }
     
@@ -265,5 +267,7 @@ async def verify_and_activate_subscription(
         return {
             "reference": reference,
             "status": PaymentStatus.FAILED,
+            "plan": transaction.plan,
+            "billing_cycle": transaction.billing_cycle,
             "message": verify_result.error_message or "Payment verification failed",
         }
