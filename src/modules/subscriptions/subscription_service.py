@@ -31,23 +31,45 @@ async def get_active_subscription(
     user_id: uuid.UUID,
     db: AsyncSession,
 ) -> Optional[Subscription]:
-    """Get user's active subscription."""
-    result = await db.execute(
-        select(Subscription)
-        .where(
-            and_(
-                Subscription.user_id == user_id,
-                or_(
-                    Subscription.status == SubscriptionStatus.ACTIVE,
-                    and_(
-                        Subscription.status == SubscriptionStatus.CANCELLED,
-                        Subscription.end_date > datetime.utcnow()
-                    )
+    """
+    Get user's current subscription status.
+    1. Checks for Active/Cancelled(Future) subscriptions.
+    2. Lazy expires them if end_date passed.
+    3. If none, returns most recent subscription (Expired/Cancelled).
+    """
+    now = datetime.utcnow()
+    
+    # 1. Try to find a logically active subscription
+    stmt = select(Subscription).where(
+        and_(
+            Subscription.user_id == user_id,
+            or_(
+                Subscription.status == SubscriptionStatus.ACTIVE,
+                and_(
+                    Subscription.status == SubscriptionStatus.CANCELLED,
+                    Subscription.end_date > now
                 )
             )
         )
-        .order_by(Subscription.created_at.desc())
-    )
+    ).order_by(Subscription.created_at.desc())
+    
+    result = await db.execute(stmt)
+    active_sub = result.scalars().first()
+    
+    if active_sub:
+        # Check for expiry
+        if active_sub.end_date and active_sub.end_date < now:
+            active_sub.status = SubscriptionStatus.EXPIRED
+            await db.commit()
+            await db.refresh(active_sub)
+        return active_sub
+
+    # 2. Fallback: Get most recent subscription of ANY status (to show Expired state)
+    stmt = select(Subscription).where(
+        Subscription.user_id == user_id
+    ).order_by(Subscription.created_at.desc())
+    
+    result = await db.execute(stmt)
     return result.scalars().first()
 
 
@@ -58,37 +80,51 @@ async def get_best_valid_subscription(
     """
     Get the highest priority valid subscription for access control.
     Priority: PRO > FOCUSED > FREE.
+    Grace Period: Allows subscriptions expired < 7 days ago.
     """
-    # 1. Fetch all valid subscriptions
+    now = datetime.utcnow()
+    seven_days_ago = now - timedelta(days=7)
+    
+    # 1. Fetch valid candidates (including grace period)
+    # We accept ACTIVE, CANCELLED, or EXPIRED if end_date > 7 days ago
     stmt = select(Subscription).where(
         and_(
             Subscription.user_id == user_id,
+            Subscription.plan != SubscriptionPlan.FREE, # Ignore FREE for access check (it's handled by default)
             or_(
                 Subscription.status == SubscriptionStatus.ACTIVE,
-                and_(
-                    Subscription.status == SubscriptionStatus.CANCELLED,
-                    Subscription.end_date > datetime.utcnow()
-                )
+                Subscription.status == SubscriptionStatus.CANCELLED,
+                Subscription.status == SubscriptionStatus.EXPIRED
             )
         )
     )
     result = await db.execute(stmt)
     subscriptions = result.scalars().all()
     
-    if not subscriptions:
+    valid_subs = []
+    for sub in subscriptions:
+        # Check Expiry with Grace Period
+        # If end_date is None (unlikely for non-free), assume valid? Or skip?
+        if sub.end_date:
+            if sub.end_date > seven_days_ago:
+                valid_subs.append(sub)
+        else:
+            # No end date usually means unlimited or bug. Assume valid if ACTIVE.
+            if sub.status == SubscriptionStatus.ACTIVE:
+                valid_subs.append(sub)
+    
+    if not valid_subs:
         return None
         
     # 2. Sort by priority
-    # Define priority map
     PRIORITY = {
         SubscriptionPlan.PRO: 3,
         SubscriptionPlan.FOCUSED: 2,
         SubscriptionPlan.FREE: 1
     }
     
-    # Sort descending by priority, then descending by created_at (newest first for ties)
     sorted_subs = sorted(
-        subscriptions, 
+        valid_subs, 
         key=lambda s: (PRIORITY.get(s.plan, 0), s.created_at), 
         reverse=True
     )
