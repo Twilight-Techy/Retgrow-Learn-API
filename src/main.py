@@ -40,6 +40,11 @@ app.add_middleware(
 # Include routers from a separate file
 include_routers(app)
 
+# Health check endpoint
+@app.get("/health", tags=["Health"])
+async def health_check():
+    return {"status": "ok", "message": "API is running"}
+
 # Root endpoint
 @app.get("/", response_class=HTMLResponse)
 async def root():
