@@ -5,8 +5,9 @@ from src.modules.subscriptions import subscription_service
 
 async def _get_user_plan(user: User, db: AsyncSession) -> SubscriptionPlan:
     """Helper to get user's active plan. Defaults to FREE."""
-    subscription = await subscription_service.get_active_subscription(user.id, db)
-    if subscription and subscription.status == SubscriptionStatus.ACTIVE:
+    subscription = await subscription_service.get_best_valid_subscription(user.id, db)
+    # The service function already filters for valid status/date and sorts by priority.
+    if subscription:
         return subscription.plan
     return SubscriptionPlan.FREE
 

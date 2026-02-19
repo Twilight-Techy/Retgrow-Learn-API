@@ -4,7 +4,7 @@ Subscription service handling subscription logic.
 import uuid
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.models import (
@@ -37,12 +37,63 @@ async def get_active_subscription(
         .where(
             and_(
                 Subscription.user_id == user_id,
-                Subscription.status == SubscriptionStatus.ACTIVE,
+                or_(
+                    Subscription.status == SubscriptionStatus.ACTIVE,
+                    and_(
+                        Subscription.status == SubscriptionStatus.CANCELLED,
+                        Subscription.end_date > datetime.utcnow()
+                    )
+                )
             )
         )
         .order_by(Subscription.created_at.desc())
     )
     return result.scalars().first()
+
+
+async def get_best_valid_subscription(
+    user_id: uuid.UUID,
+    db: AsyncSession,
+) -> Optional[Subscription]:
+    """
+    Get the highest priority valid subscription for access control.
+    Priority: PRO > FOCUSED > FREE.
+    """
+    # 1. Fetch all valid subscriptions
+    stmt = select(Subscription).where(
+        and_(
+            Subscription.user_id == user_id,
+            or_(
+                Subscription.status == SubscriptionStatus.ACTIVE,
+                and_(
+                    Subscription.status == SubscriptionStatus.CANCELLED,
+                    Subscription.end_date > datetime.utcnow()
+                )
+            )
+        )
+    )
+    result = await db.execute(stmt)
+    subscriptions = result.scalars().all()
+    
+    if not subscriptions:
+        return None
+        
+    # 2. Sort by priority
+    # Define priority map
+    PRIORITY = {
+        SubscriptionPlan.PRO: 3,
+        SubscriptionPlan.FOCUSED: 2,
+        SubscriptionPlan.FREE: 1
+    }
+    
+    # Sort descending by priority, then descending by created_at (newest first for ties)
+    sorted_subs = sorted(
+        subscriptions, 
+        key=lambda s: (PRIORITY.get(s.plan, 0), s.created_at), 
+        reverse=True
+    )
+    
+    return sorted_subs[0]
 
 
 async def get_or_create_subscription(
@@ -107,8 +158,6 @@ async def create_new_subscription_record(
     current_subscription = await get_active_subscription(user_id, db)
     if current_subscription:
         current_subscription.status = SubscriptionStatus.CANCELLED
-        # Set end date to now as the switch happens immediately
-        current_subscription.end_date = datetime.utcnow()
         db.add(current_subscription)
     
     # 2. Create new subscription
