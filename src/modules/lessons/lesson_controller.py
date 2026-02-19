@@ -64,7 +64,7 @@ async def complete_lesson(
 
     # Now, check if the user has completed all lessons in the course.
     # Get all lessons for the course.
-    lessons = await lesson_service.get_lessons_by_course(str(course_id), str(current_user.id), db)
+    lessons = await lesson_service.get_lessons_by_course(str(course_id), current_user, db)
     total_lessons = len(lessons)
     # Extract the IDs of the lessons in this course.
     lesson_ids = [lesson.id for lesson in lessons]    
