@@ -96,3 +96,15 @@ class ChangePasswordRequest(BaseModel):
 
 class ChangePasswordResponse(BaseModel):
     message: str
+
+class AuthMeResponse(BaseModel):
+    id: UUID
+    email: EmailStr
+    username: str
+    first_name: str
+    last_name: str
+    role: str
+    is_active: bool = True
+    
+    class Config:
+        from_attributes = True

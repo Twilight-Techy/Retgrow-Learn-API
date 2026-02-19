@@ -38,6 +38,13 @@ async def login(
 
     return schemas.TokenResponse(access_token=access_token)
 
+@router.get("/me", response_model=schemas.AuthMeResponse)
+async def get_me(current_user: User = Depends(get_current_user)):
+    """
+    Get current authenticated user info (minimal).
+    """
+    return current_user
+
 @router.post("/signup", response_model=schemas.SignupResponse)
 async def signup(
     signup_data: SignupRequest,
