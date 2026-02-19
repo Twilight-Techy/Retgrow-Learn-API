@@ -1,6 +1,7 @@
 # src/auth/schemas.py
 
 from typing import Annotated, Optional
+from uuid import UUID
 from pydantic import BaseModel, EmailStr, Field, model_validator
 from fastapi import HTTPException
 

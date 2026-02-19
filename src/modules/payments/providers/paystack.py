@@ -111,7 +111,6 @@ class PaystackProvider(BasePaymentProvider):
                         amount=amount_naira,
                         currency=tx_data.get("currency", "NGN"),
                         external_reference=tx_data.get("reference"),
-                        external_reference=tx_data.get("reference"),
                         raw_response=data,
                         authorization_code=tx_data.get("authorization", {}).get("authorization_code"),
                     )
