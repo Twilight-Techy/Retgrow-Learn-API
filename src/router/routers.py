@@ -21,6 +21,7 @@ from src.modules.search.search_controller import router as search_router
 from src.modules.tracks.track_controller import router as track_router
 from src.modules.user.user_controller import router as user_router
 from src.modules.certificates.certificate_controller import router as certificate_router
+from src.modules.cron.cron_controller import router as cron_router
 
 def include_routers(app: FastAPI) -> None:
     app.include_router(auth_router)
@@ -28,6 +29,7 @@ def include_routers(app: FastAPI) -> None:
     app.include_router(certificate_router)
     app.include_router(contact_router)
     app.include_router(course_router)
+    app.include_router(cron_router)
     app.include_router(dashboard_router)
     app.include_router(deadline_router)
     app.include_router(discussion_router)

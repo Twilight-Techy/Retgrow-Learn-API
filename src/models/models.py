@@ -663,6 +663,7 @@ class Subscription(Base):
     # Payment info
     payment_provider = Column(SAEnum(PaymentProvider), nullable=True)  # Null for free plan
     external_subscription_id = Column(String(255), nullable=True)  # Provider's subscription ID
+    payment_token = Column(String(255), nullable=True)  # Authorization code for recurring payments
     
     # Auto-renewal settings
     auto_renew = Column(Boolean, default=True, nullable=False)

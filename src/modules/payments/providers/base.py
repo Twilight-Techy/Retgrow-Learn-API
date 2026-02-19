@@ -28,6 +28,7 @@ class PaymentVerifyResult:
     external_reference: Optional[str] = None
     error_message: Optional[str] = None
     raw_response: Optional[Dict[str, Any]] = None
+    authorization_code: Optional[str] = None
 
 
 class BasePaymentProvider(ABC):
@@ -87,5 +88,28 @@ class BasePaymentProvider(ABC):
             
         Returns:
             True if signature is valid
+        """
+        pass
+
+    @abstractmethod
+    async def charge_subscription(
+        self,
+        amount: Decimal,
+        email: str,
+        authorization_code: str,
+        reference: str,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> PaymentInitResult:
+        """
+        Charge a saved authorization (recurring payment).
+        
+        Args:
+            amount: Amount in Naira
+            email: Customer email
+            authorization_code: The saved token from first payment
+            reference: Unique transaction reference
+            
+        Returns:
+            PaymentInitResult (success=True if charged immediately)
         """
         pass

@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     OPAY_ENVIRONMENT: str = "sandbox"
     STRIPE_SECRET_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
+    CRON_SECRET: str = "secret"
 
     # Uncomment if you want to support comma-separated ALLOWED_ORIGINS strings
     @field_validator("ALLOWED_ORIGINS", mode="before")

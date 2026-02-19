@@ -242,6 +242,10 @@ async def verify_and_activate_subscription(
             db=db
         )
         
+        # Save payment token for recurring billing
+        if verify_result.authorization_code:
+            subscription.payment_token = verify_result.authorization_code
+        
         # Link transaction to subscription
         await db.flush()
         transaction.subscription_id = subscription.id

@@ -111,7 +111,9 @@ class PaystackProvider(BasePaymentProvider):
                         amount=amount_naira,
                         currency=tx_data.get("currency", "NGN"),
                         external_reference=tx_data.get("reference"),
+                        external_reference=tx_data.get("reference"),
                         raw_response=data,
+                        authorization_code=tx_data.get("authorization", {}).get("authorization_code"),
                     )
                 else:
                     return PaymentVerifyResult(
@@ -148,3 +150,59 @@ class PaystackProvider(BasePaymentProvider):
         ).hexdigest()
         
         return hmac.compare_digest(signature, expected_signature)
+
+    async def charge_subscription(
+        self,
+        amount: Decimal,
+        email: str,
+        authorization_code: str,
+        reference: str,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> PaymentInitResult:
+        """
+        Charge a saved authorization (recurring payment).
+        """
+        # Convert Naira to kobo (multiply by 100)
+        amount_kobo = int(amount * 100)
+        
+        payload = {
+            "email": email,
+            "amount": amount_kobo,
+            "authorization_code": authorization_code,
+            "reference": reference,
+            "currency": "NGN",
+        }
+        
+        if metadata:
+            payload["metadata"] = metadata
+            
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.base_url}/transaction/charge_authorization",
+                    headers=self.headers,
+                    json=payload,
+                    timeout=30.0,
+                )
+                
+                data = response.json()
+                
+                if response.status_code == 200 and data.get("status"):
+                    # For charge_authorization, success means transaction is processing or successful
+                    return PaymentInitResult(
+                        success=True,
+                        external_reference=data["data"]["reference"],
+                        # authorization_url is not needed/present for direct charge usually, 
+                        # but check if it requires OTP (rare for auth charge)
+                    )
+                else:
+                    return PaymentInitResult(
+                        success=False,
+                        error_message=data.get("message", "Failed to charge authorization"),
+                    )
+                    
+        except Exception as e:
+            return PaymentInitResult(
+                success=False,
+                error_message=str(e),
+            )
