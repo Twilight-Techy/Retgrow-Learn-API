@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.database import get_db
+from src.common.database.database import get_db_session as get_db
 from src.modules.subscriptions import recurring_service
 from src.common.config import settings
 from typing import Optional, Dict, Any

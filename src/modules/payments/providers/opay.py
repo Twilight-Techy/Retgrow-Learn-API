@@ -195,3 +195,21 @@ class OPayProvider(BasePaymentProvider):
         ).hexdigest()
         
         return hmac.compare_digest(signature.lower(), expected_signature.lower())
+
+    async def charge_subscription(
+        self,
+        amount: Decimal,
+        email: str,
+        authorization_code: str,
+        reference: str,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> PaymentInitResult:
+        """
+        Charge user's saved card (Recurring).
+        
+        Not yet implemented for OPay.
+        """
+        return PaymentInitResult(
+            success=False,
+            error_message="Recurring payment is not yet supported for OPay provider."
+        )

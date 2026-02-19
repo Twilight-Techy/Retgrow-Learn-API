@@ -186,3 +186,21 @@ class StripeProvider(BasePaymentProvider):
             return True
         except (stripe.error.SignatureVerificationError, ValueError):
             return False
+
+    async def charge_subscription(
+        self,
+        amount: Decimal,
+        email: str,
+        authorization_code: str,
+        reference: str,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> PaymentInitResult:
+        """
+        Charge user's saved card (Recurring).
+        
+        Not yet implemented for Stripe (requires PaymentIntents or Subscription API).
+        """
+        return PaymentInitResult(
+            success=False,
+            error_message="Recurring payment is not yet supported for Stripe provider via this method."
+        )
