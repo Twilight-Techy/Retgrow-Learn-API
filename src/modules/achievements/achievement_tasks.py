@@ -29,13 +29,10 @@ async def _award_achievement(user_id: str, achievement_title: str, db: AsyncSess
     await db.commit()
     print(f"Achievement '{achievement_title}' awarded to user {user_id}.")
 
-def award_achievement(user_id: str, achievement_title: str):
+async def award_achievement(user_id: str, achievement_title: str):
     """
     Schedules a background task to award an achievement to the user.
     This function is intended to be called from a FastAPI BackgroundTasks context.
     """
-    async def run():
-        async with async_session() as session:
-            await _award_achievement(user_id, achievement_title, session)
-    # Schedule the asynchronous task without blocking the main request flow
-    asyncio.create_task(run())
+    async with async_session() as session:
+        await _award_achievement(user_id, achievement_title, session)
