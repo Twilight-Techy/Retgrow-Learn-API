@@ -2,16 +2,29 @@
 
 {% block title %}Payment Failed{% endblock %}
 
+{% block hero %}
+<div style="background-color: #EF4444; padding: 40px 20px; text-align: center; color: white;">
+    <h2 style="margin: 0; font-size: 24px;">Action Required: Payment Failed</h2>
+</div>
+{% endblock %}
+
 {% block content %}
-<h2>Payment Failed</h2>
 <p>Hi {{ first_name }},</p>
-<p>We attempted to renew your subscription for the <strong>{{ plan_name }}</strong> plan, but the payment failed.</p>
-<p>Reason: {{ failure_reason }}</p>
+<p>We encountered an issue while attempting to renew your subscription for the <strong>{{ plan_name }}</strong> plan.
+</p>
 
-<p>Don't worry, we'll try again in a few days. To ensure uninterrupted access, please update your payment method or
-    ensure sufficient funds.</p>
+<div style="background-color: #FEF2F2; border-left: 4px solid #EF4444; padding: 16px; margin: 24px 0; color: #991B1B;">
+    <strong>Reason:</strong> {{ failure_reason }}
+</div>
 
-<p style="text-align: center;">
-    <a href="{{ billing_link }}" class="button">Update Payment Method</a>
+<p>Don't worry, we'll try again in a few days. To ensure uninterrupted access to your courses and tracks, please check
+    your payment details.</p>
+
+<div style="text-align: center; margin: 32px 0;">
+    <a href="{{ billing_link }}" class="button" style="background-color: #EF4444;">Update Payment Method</a>
+</div>
+
+<p style="font-size: 14px; color: #6B7280; text-align: center;">
+    If you have already updated your payment method, please ignore this email.
 </p>
 {% endblock %}

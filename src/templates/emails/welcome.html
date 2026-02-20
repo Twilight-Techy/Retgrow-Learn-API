@@ -2,11 +2,24 @@
 
 {% block title %}Welcome to Retgrow Learn{% endblock %}
 
+{% block hero %}
+<div style="background-color: #7C3AED; padding: 40px; text-align: center; color: white;">
+    <!-- Optional: Hero Image or Pattern -->
+</div>
+{% endblock %}
+
 {% block content %}
-<h2>Welcome, {{ first_name }}! 👋</h2>
-<p>Your email has been verified successfully. You now have full access to your account.</p>
-<p>Explore our tracks and start learning today!</p>
-<p style="text-align: center;">
-    <a href="{{ dashboard_link }}" class="button">Go to Dashboard</a>
+<h1>Welcome aboard, {{ first_name }}! 👋</h1>
+<p>We're thrilled to have you with us. Your email has been successfully verified, and your account is now fully active.
+</p>
+<p>At Retgrow Learn, you have access to top-tier courses and tracks designed to help you grow. Start your journey today!
+</p>
+
+<div style="text-align: center; margin: 32px 0;">
+    <a href="{{ dashboard_link }}" class="button">Go to Your Dashboard</a>
+</div>
+
+<p style="font-size: 14px; text-align: center;">
+    Or copy this link: <a href="{{ dashboard_link }}">{{ dashboard_link }}</a>
 </p>
 {% endblock %}
