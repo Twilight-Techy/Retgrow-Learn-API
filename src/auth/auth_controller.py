@@ -1,12 +1,13 @@
 # src/auth/auth_controller.py
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.schemas import SignupRequest, ResendVerificationRequest
 from src.auth.check_consecutive_logins import check_consecutive_logins
 from src.auth.dependencies import get_current_user
 from src.common.database.database import get_db_session
+from src.common.rate_limit import limiter
 from src.auth import auth_service, schemas
 from src.models.models import User
 from src.modules.achievements.achievement_tasks import award_achievement
@@ -14,7 +15,9 @@ from src.modules.achievements.achievement_tasks import award_achievement
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/login", response_model=schemas.TokenResponse)
+@limiter.limit("5/minute")
 async def login(
+    request: Request,
     credentials: schemas.LoginRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db_session)
@@ -100,7 +103,9 @@ async def verify_user(
     return schemas.VerifyUserResponse(access_token=access_token, refresh_token=refresh_token)
 
 @router.post("/refresh", response_model=schemas.TokenResponse)
+@limiter.limit("5/minute")
 async def refresh_token(
+    request: Request,
     payload: schemas.RefreshTokenRequest,
     db: AsyncSession = Depends(get_db_session)
 ):
@@ -112,8 +117,10 @@ async def refresh_token(
 
 
 @router.post("/forgot-password", response_model=schemas.ForgotPasswordResponse)
+@limiter.limit("5/minute")
 async def forgot_password(
-    request: schemas.ForgotPasswordRequest,
+    request: Request,
+    forgot_req: schemas.ForgotPasswordRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db_session)
 ):
@@ -122,7 +129,7 @@ async def forgot_password(
     
     The endpoint will always return a success message, even if the email is not associated with any account.
     """
-    await auth_service.process_forgot_password(request.email, db, background_tasks)
+    await auth_service.process_forgot_password(forgot_req.email, db, background_tasks)
     return schemas.ForgotPasswordResponse(
         message="If an account with this email exists, a password reset link has been sent."
     )

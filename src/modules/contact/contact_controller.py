@@ -1,15 +1,18 @@
 # src/contact/contact_controller.py
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.contact import contact_service, schemas
 from src.common.database.database import get_db_session
+from src.common.rate_limit import limiter
 
 router = APIRouter(prefix="/contact", tags=["contact"])
 
 @router.post("", response_model=schemas.ContactFormResponse)
+@limiter.limit("3/minute")
 async def submit_contact_form(
+    request: Request,
     form: schemas.ContactFormRequest,
     background_tasks: BackgroundTasks
     # db: AsyncSession = Depends(get_db_session)

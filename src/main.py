@@ -6,8 +6,12 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.errors import RateLimitExceeded
 from src.common.database.database import connect_to_db, close_db_connection
 from src.common.config import settings
+from src.common.rate_limit import limiter
 from src.router.routers import include_routers
 # from src.common.utils.email import test_email
 
@@ -27,6 +31,11 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
+
+# Rate limiting
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 # Middleware for CORS using allowed origins from settings
 app.add_middleware(
