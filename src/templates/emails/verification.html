@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Verify Your Email{% endblock %}
+
+{% block content %}
+<h2>Welcome to Retgrow Learn, {{ first_name }}!</h2>
+<p>We're excited to have you on board. Please verify your email address to get started.</p>
+<p style="text-align: center;">
+    <a href="{{ verification_link }}" class="button">Verify Email</a>
+</p>
+<p>Or verify using this code:</p>
+<div
+    style="background: #edf2f7; padding: 12px; text-align: center; letter-spacing: 5px; font-weight: bold; font-size: 24px; margin: 20px 0;">
+    {{ verification_code }}
+</div>
+<p>If you didn't create an account, you can safely ignore this email.</p>
+{% endblock %}

@@ -252,6 +252,31 @@ async def verify_and_activate_subscription(
         
         await db.commit()
         
+        # Send success email
+        try:
+            from src.common.utils.email_service import send_subscription_email
+            
+            # Fetch user details if needed or use metadata
+            user_result = await db.execute(select(User).where(User.id == transaction.user_id))
+            user = user_result.scalars().first()
+            
+            if user:
+                context_data = {
+                    "plan_name": transaction.plan.value.capitalize(),
+                    "billing_cycle": transaction.billing_cycle.value.capitalize(),
+                    "amount": f"{transaction.currency} {transaction.amount:,.2f}",
+                    "date": datetime.now().strftime("%B %d, %Y"),
+                    "next_renewal_date": subscription.next_billing_date.strftime("%B %d, %Y") if subscription.next_billing_date else "N/A"
+                }
+                await send_subscription_email(
+                    type="success",
+                    user_email=user.email,
+                    user_first_name=user.first_name,
+                    context_data=context_data
+                )
+        except Exception as e:
+            print(f"Failed to send subscription email: {e}")
+        
         return {
             "reference": reference,
             "status": PaymentStatus.SUCCESS,

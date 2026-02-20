@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     EMAIL_SENDER: str
     SMTP_HOST: str
     SMTP_PORT: int
+    SMTP_USE_TLS: bool
     SMTP_USER: str
     SMTP_PASSWORD: str
     CONTACT_RECIPIENT: str

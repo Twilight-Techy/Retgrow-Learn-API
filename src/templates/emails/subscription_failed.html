@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Payment Failed{% endblock %}
+
+{% block content %}
+<h2>Payment Failed</h2>
+<p>Hi {{ first_name }},</p>
+<p>We attempted to renew your subscription for the <strong>{{ plan_name }}</strong> plan, but the payment failed.</p>
+<p>Reason: {{ failure_reason }}</p>
+
+<p>Don't worry, we'll try again in a few days. To ensure uninterrupted access, please update your payment method or
+    ensure sufficient funds.</p>
+
+<p style="text-align: center;">
+    <a href="{{ billing_link }}" class="button">Update Payment Method</a>
+</p>
+{% endblock %}

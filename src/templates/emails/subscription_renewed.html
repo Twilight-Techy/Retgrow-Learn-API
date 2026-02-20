@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Subscription Renewed{% endblock %}
+
+{% block content %}
+<h2>Subscription Renewed!</h2>
+<p>Hi {{ first_name }},</p>
+<p>Great news! Your subscription for the <strong>{{ plan_name }}</strong> plan has been successfully renewed.</p>
+
+<table style="width: 100%; margin: 20px 0; border-collapse: collapse;">
+    <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #eee;">Amount:</td>
+        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;"><strong>{{ amount }}</strong></td>
+    </tr>
+    <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #eee;">Date:</td>
+        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">{{ date }}</td>
+    </tr>
+    <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #eee;">Next Renewal:</td>
+        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">{{ next_renewal_date }}</td>
+    </tr>
+</table>
+
+<p>Keep up the great work!</p>
+<p style="text-align: center;">
+    <a href="{{ dashboard_link }}" class="button">Go to Dashboard</a>
+</p>
+{% endblock %}

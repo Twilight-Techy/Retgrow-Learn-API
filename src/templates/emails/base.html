@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Retgrow Learn Notification{% endblock %}</title>
+    <style>
+        body {
+            font-family: 'Inter', Arial, sans-serif;
+            background-color: #F3F4F6;
+            margin: 0;
+            padding: 0;
+            color: #1F2937;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            background-color: #7C3AED;
+            padding: 24px;
+            text-align: center;
+        }
+        .header h1 {
+            color: #ffffff;
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+        }
+        .content {
+            padding: 32px;
+            line-height: 1.6;
+        }
+        .button {
+            display: inline-block;
+            background-color: #7C3AED;
+            color: #ffffff;
+            padding: 12px 24px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            margin-top: 16px;
+        }
+        .footer {
+            background-color: #F9FAFB;
+            padding: 24px;
+            text-align: center;
+            font-size: 12px;
+            color: #6B7280;
+            border-top: 1px solid #E5E7EB;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Retgrow Learn</h1>
+        </div>
+        <div class="content">
+            {% block content %}{% endblock %}
+        </div>
+        <div class="footer">
+            <p>&copy; 2026 Retgrow Learn. All rights reserved.</p>
+            <p>You are receiving this email because you have an account on Retgrow Learn.</p>
+        </div>
+    </div>
+</body>
+</html>

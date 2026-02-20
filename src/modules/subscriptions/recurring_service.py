@@ -176,11 +176,48 @@ async def renew_subscription(subscription: Subscription, db: AsyncSession) -> bo
         
         await db.commit()
         logger.info(f"Subscription {subscription.id} renewed until {new_end_date}")
+        
+        # Send renewal success email
+        try:
+            from src.common.utils.email_service import send_subscription_email
+            
+            context_data = {
+                "plan_name": subscription.plan.value.capitalize(),
+                "billing_cycle": subscription.billing_cycle.value.capitalize(),
+                "amount": f"NGN {amount:,.2f}",
+                "date": datetime.utcnow().strftime("%B %d, %Y"),
+                "next_renewal_date": new_end_date.strftime("%B %d, %Y")
+            }
+            await send_subscription_email(
+                type="renewed",
+                user_email=user.email,
+                user_first_name=user.first_name,
+                context_data=context_data
+            )
+        except Exception as e:
+            logger.error(f"Failed to send renewal email: {e}")
+            
         return True
     else:
         # Payment failed
-        # We don't change subscription status yet (let lazy expiry handle it)
-        # Maybe send email?
         await db.commit()
         logger.warning(f"Subscription {subscription.id} renewal failed: {result.error_message}")
+        
+        # Send failure email
+        try:
+            from src.common.utils.email_service import send_subscription_email
+            
+            context_data = {
+                "plan_name": subscription.plan.value.capitalize(),
+                "failure_reason": result.error_message or "Insufficient funds or card error"
+            }
+            await send_subscription_email(
+                type="failed",
+                user_email=user.email,
+                user_first_name=user.first_name,
+                context_data=context_data
+            )
+        except Exception as e:
+            logger.error(f"Failed to send failed renewal email: {e}")
+            
         return False
