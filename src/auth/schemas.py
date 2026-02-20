@@ -13,6 +13,7 @@ class LoginRequest(BaseModel):
 
 class TokenResponse(BaseModel):
     access_token: str
+    refresh_token: str
     # token_type: str = "bearer"
 
 class SignupRequest(BaseModel):
@@ -40,7 +41,11 @@ class VerifyUserRequest(BaseModel):
 class VerifyUserResponse(BaseModel):
     message: str = "User has been verified successfully."
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
 
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr

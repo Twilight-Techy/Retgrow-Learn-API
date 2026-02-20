@@ -25,7 +25,7 @@ async def login(
     - **email**: The user's email address.
     - **password**: The user's password.
     """
-    user, access_token = await auth_service.login_user(credentials.email, credentials.password, db)
+    user, access_token, refresh_token = await auth_service.login_user(credentials.email, credentials.password, db)
     if not access_token or not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -36,7 +36,7 @@ async def login(
     if await check_consecutive_logins(user, db):
         background_tasks.add_task(award_achievement, str(user.id), "Consistent")
 
-    return schemas.TokenResponse(access_token=access_token)
+    return schemas.TokenResponse(access_token=access_token, refresh_token=refresh_token)
 
 @router.get("/me", response_model=schemas.AuthMeResponse)
 async def get_me(current_user: User = Depends(get_current_user)):
@@ -91,13 +91,24 @@ async def verify_user(
     db: AsyncSession = Depends(get_db_session)
 ):
     """Verify a user's email using a verification code."""
-    access_token = await auth_service.verify_user(verification_data.model_dump(), db, background_tasks)
+    access_token, refresh_token = await auth_service.verify_user(verification_data.model_dump(), db, background_tasks)
     if not access_token:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid verification code."
         )
-    return schemas.VerifyUserResponse(access_token=access_token)
+    return schemas.VerifyUserResponse(access_token=access_token, refresh_token=refresh_token)
+
+@router.post("/refresh", response_model=schemas.TokenResponse)
+async def refresh_token(
+    payload: schemas.RefreshTokenRequest,
+    db: AsyncSession = Depends(get_db_session)
+):
+    """
+    Exchange a valid refresh token for a new access + refresh token pair.
+    """
+    new_access, new_refresh = await auth_service.refresh_access_token(payload.refresh_token, db)
+    return schemas.TokenResponse(access_token=new_access, refresh_token=new_refresh)
 
 
 @router.post("/forgot-password", response_model=schemas.ForgotPasswordResponse)

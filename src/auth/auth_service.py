@@ -22,11 +22,21 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 def create_access_token(data: dict, expires_delta: timedelta = None) -> str:
-    """Create a JWT token including an expiration date."""
+    """Create a JWT access token including an expiration date."""
     to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + (expires_delta if expires_delta else timedelta(minutes=15))
-    to_encode.update({"exp": expire})
+    expire = datetime.now(timezone.utc) + (expires_delta if expires_delta else timedelta(minutes=settings.JWT_EXPIRATION_MINUTES))
+    to_encode.update({"exp": expire, "type": "access"})
     encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
+    return encoded_jwt
+
+def create_refresh_token(data: dict, expires_delta: timedelta = None) -> str:
+    """Create a JWT refresh token with a longer expiry, signed with a separate secret."""
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + (
+        expires_delta if expires_delta else timedelta(days=settings.JWT_REFRESH_EXPIRATION_DAYS)
+    )
+    to_encode.update({"exp": expire, "type": "refresh"})
+    encoded_jwt = jwt.encode(to_encode, settings.JWT_REFRESH_SECRET, algorithm=settings.JWT_ALGORITHM)
     return encoded_jwt
 
 def hash_password(password: str) -> str:
@@ -137,6 +147,7 @@ async def verify_user(verification_data: dict, db: AsyncSession, background_task
 
     access_token_expires = timedelta(minutes=settings.JWT_EXPIRATION_MINUTES)
     access_token = create_access_token(data={"sub": str(user.id)}, expires_delta=access_token_expires)
+    refresh_token = create_refresh_token(data={"sub": str(user.id)})
 
     background_tasks.add_task(
         send_email,
@@ -146,7 +157,7 @@ async def verify_user(verification_data: dict, db: AsyncSession, background_task
         html_body=f"<p>Your email has been successfully verified.</p>"
     )
 
-    return access_token
+    return access_token, refresh_token
 
 async def record_login_event(user_id: str, db: AsyncSession):
     login_event = UserLogin(user_id=user_id)
@@ -169,15 +180,50 @@ async def authenticate_user(email: str, password: str, db: AsyncSession):
         )
     return user
 
-async def login_user(email: str, password: str, db: AsyncSession) -> str:
-    """Authenticate a user and return a JWT access token if successful."""
+async def login_user(email: str, password: str, db: AsyncSession):
+    """Authenticate a user and return JWT access + refresh tokens if successful."""
     user = await authenticate_user(email, password, db)
     if not user:
         return None
     record_login_event(user.id, db)
     access_token_expires = timedelta(minutes=settings.JWT_EXPIRATION_MINUTES)
     access_token = create_access_token(data={"sub": str(user.id)}, expires_delta=access_token_expires)
-    return user, access_token
+    refresh_token = create_refresh_token(data={"sub": str(user.id)})
+    return user, access_token, refresh_token
+
+async def refresh_access_token(refresh_token_str: str, db: AsyncSession):
+    """
+    Validate a refresh token and issue a new access + refresh token pair.
+    Returns (access_token, refresh_token) or raises HTTPException.
+    """
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid or expired refresh token. Please log in again.",
+    )
+    try:
+        payload = jwt.decode(
+            refresh_token_str,
+            settings.JWT_REFRESH_SECRET,
+            algorithms=[settings.JWT_ALGORITHM],
+        )
+        user_id: str = payload.get("sub")
+        token_type: str = payload.get("type")
+        if user_id is None or token_type != "refresh":
+            raise credentials_exception
+    except (DecodeError, jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+        raise credentials_exception
+
+    # Verify user still exists and is active
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalars().first()
+    if user is None:
+        raise credentials_exception
+
+    # Issue new token pair (rotation)
+    access_token_expires = timedelta(minutes=settings.JWT_EXPIRATION_MINUTES)
+    new_access_token = create_access_token(data={"sub": str(user.id)}, expires_delta=access_token_expires)
+    new_refresh_token = create_refresh_token(data={"sub": str(user.id)})
+    return new_access_token, new_refresh_token
 
 def create_reset_token(email: str, expires_delta: timedelta = None) -> str:
     """Generate a JWT reset token for password recovery."""

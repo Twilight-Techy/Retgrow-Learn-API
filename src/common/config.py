@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     JWT_SECRET: str
     JWT_ALGORITHM: str
     JWT_EXPIRATION_MINUTES: int
+    JWT_REFRESH_SECRET: str
+    JWT_REFRESH_EXPIRATION_DAYS: int = 7
     ALLOWED_ORIGINS: List[str] = ["*"]
     LOG_LEVEL: str = "info"
 
