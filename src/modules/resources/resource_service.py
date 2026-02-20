@@ -6,7 +6,7 @@ import uuid
 from sqlalchemy import or_
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import aliased
+from sqlalchemy.orm import aliased, joinedload
 
 from src.models.models import Resource, Track, UserResource
 
@@ -17,15 +17,15 @@ async def get_resources(
     rtype: Optional[str] = None,
     skip: int = 0,
     limit: int = 10,
-) -> List[dict]:
+) -> list:
     """
     Return resources filtered by q (title/description), track_slug and type.
-    Returns list of dicts that match ResourceResponse schema (includes track_title/track_slug).
+    Returns ORM objects — Pydantic's model_validator handles track_title/track_slug extraction.
     """
-    # build base select that returns Resource + Track.title + Track.slug (left join)
-    stmt = select(Resource, Track.title.label("track_title"), Track.slug.label("track_slug")).outerjoin(
+    # Use joinedload to eagerly load the track relationship
+    stmt = select(Resource).outerjoin(
         Track, Resource.track_id == Track.id
-    )
+    ).options(joinedload(Resource.track))
 
     # filters
     conditions = []
@@ -41,8 +41,7 @@ async def get_resources(
             rtype_enum = RT(rtype)  # RT("article") -> ResourceType.ARTICLE
             conditions.append(Resource.type == rtype_enum)
         except Exception:
-            # invalid rtype — return empty list or ignore filter; here we ignore the filter
-            # Alternatively, you could raise a ValueError to the controller to return 400
+            # invalid rtype — ignore the filter
             pass
 
     if track_slug:
@@ -55,29 +54,7 @@ async def get_resources(
     stmt = stmt.offset(skip).limit(limit)
 
     result = await db.execute(stmt)
-    rows = result.all()  # returns list of Row objects (Resource, track_title, track_slug)
-
-    resources = []
-    for row in rows:
-        resource_obj = row[0]  # the Resource instance
-        track_title = row[1] if len(row) > 1 else None
-        track_slug_val = row[2] if len(row) > 2 else None
-
-        resources.append({
-            "id": str(resource_obj.id),
-            "title": resource_obj.title,
-            "description": resource_obj.description,
-            "image_url": resource_obj.image_url,
-            "type": resource_obj.type.value if getattr(resource_obj, "type", None) is not None else None,
-            "url": resource_obj.url,
-            "track_id": str(resource_obj.track_id) if resource_obj.track_id else None,
-            "track_title": track_title,
-            "track_slug": track_slug_val,
-            "created_at": resource_obj.created_at,
-            "updated_at": resource_obj.updated_at,
-        })
-
-    return resources
+    return result.scalars().unique().all()
 
 async def get_resource_by_id(resource_id: str, db: AsyncSession) -> Optional[Resource]:
     """

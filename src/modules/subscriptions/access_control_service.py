@@ -54,7 +54,7 @@ async def check_enrollment_eligibility(user: User, course: Course, db: AsyncSess
             
     return False
 
-async def check_module_access(user: User, module: Module, course: Course, db: AsyncSession) -> bool:
+async def check_module_access(user: User, module: Module, course: Course, db: AsyncSession, plan: SubscriptionPlan = None) -> bool:
     """
     Check if a user can access a specific module's content.
     
@@ -67,8 +67,13 @@ async def check_module_access(user: User, module: Module, course: Course, db: As
         - Full Access if Course Price == 0.
         - Full Access if Course is in Enrolled Learning Path.
         - Else: Access only if module.is_free == True.
+    
+    Args:
+        plan: If provided, skips the DB query to fetch the user's plan.
+              Pass this when calling in a loop to avoid O(N) redundant queries.
     """
-    plan = await _get_user_plan(user, db)
+    if plan is None:
+        plan = await _get_user_plan(user, db)
     
     if plan == SubscriptionPlan.PRO:
         return True

@@ -44,11 +44,14 @@ async def get_lessons_by_course(course_id: str, current_user: User, db: AsyncSes
 
     result = await db.execute(stmt)
 
+    # Pre-fetch the user's plan ONCE (avoids O(N) DB queries inside the loop)
+    user_plan = await access_control_service._get_user_plan(current_user, db)
+
     lessons = []
     # Result rows: (Lesson, Module, Course, completed)
     for lesson, module, course, completed in result.all():
-        # Check access
-        has_access = await access_control_service.check_module_access(current_user, module, course, db)
+        # Check access — plan is passed in to skip redundant DB lookup
+        has_access = await access_control_service.check_module_access(current_user, module, course, db, plan=user_plan)
         
         # We need to return Lesson objects with attached fields like 'module_title' and 'completed'
         # and 'is_locked'.

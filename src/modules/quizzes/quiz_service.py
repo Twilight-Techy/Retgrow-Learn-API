@@ -37,38 +37,46 @@ async def get_quizzes_by_track(user_id: str, db: AsyncSession) -> List[Dict[str,
         return []
 
     # 2. Retrieve courses for the track using the TrackCourse association.
+    #    Eager-load course relationship to avoid lazy-load inside the loop.
     tc_stmt = (
         select(TrackCourse)
         .where(TrackCourse.track_id == learning_path.track_id)
         .order_by(TrackCourse.order.asc())
+        .options(selectinload(TrackCourse.course))
     )
     tc_result = await db.execute(tc_stmt)
     track_course_records = tc_result.scalars().all()
 
     # Build a mapping for each course using the order from TrackCourse.
     course_quiz_map = {}
+    course_ids = []
     for tc in track_course_records:
-        course = tc.course  # Assumes TrackCourse has a relationship to Course.
-        course_quiz_map[str(course.id)] = {
+        course = tc.course
+        cid = str(course.id)
+        course_ids.append(cid)
+        course_quiz_map[cid] = {
             "course_id": course.id,
             "course_title": course.title,
             "order": tc.order,
             "quizzes": []
         }
 
-    # 3. For each course, retrieve quizzes via the CourseQuiz association, ordered by CourseQuiz.order.
-    for course_id_str in course_quiz_map.keys():
+    # 3. Single query: fetch ALL CourseQuiz records for all courses at once (eliminates N+1).
+    if course_ids:
         cq_stmt = (
             select(CourseQuiz)
-            .where(CourseQuiz.course_id == course_id_str)
+            .where(CourseQuiz.course_id.in_(course_ids))
             .order_by(CourseQuiz.order.asc())
+            .options(selectinload(CourseQuiz.quiz))
         )
         cq_result = await db.execute(cq_stmt)
-        course_quiz_records = cq_result.scalars().all()
-        for cq in course_quiz_records:
-            # Each CourseQuiz record contains a relationship to Quiz.
-            quiz = cq.quiz
-            course_quiz_map[course_id_str]["quizzes"].append(quiz)
+        all_course_quizzes = cq_result.scalars().all()
+
+        # Group by course_id in Python
+        for cq in all_course_quizzes:
+            cid = str(cq.course_id)
+            if cid in course_quiz_map:
+                course_quiz_map[cid]["quizzes"].append(cq.quiz)
 
     # 4. Convert the mapping to a list sorted by the course order.
     courses_quizzes = sorted(list(course_quiz_map.values()), key=lambda x: x["order"])

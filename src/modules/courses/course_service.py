@@ -301,9 +301,12 @@ async def get_course_content(course_id: str, db: AsyncSession, current_user: Opt
         res = await db.execute(stmt)
         completed_lesson_ids = set(res.scalars().all())
 
+        # Pre-fetch subscription plan ONCE (avoids O(modules) DB queries in the loop)
+        user_plan = await access_control_service._get_user_plan(current_user, db)
+
         for module in course.modules:
-            # Check module access
-            has_access = await access_control_service.check_module_access(current_user, module, course, db)
+            # Check module access — plan is passed to skip redundant DB lookup
+            has_access = await access_control_service.check_module_access(current_user, module, course, db, plan=user_plan)
             
             for lesson in module.lessons:
                 # Set completion status

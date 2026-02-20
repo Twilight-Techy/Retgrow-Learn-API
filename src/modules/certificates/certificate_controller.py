@@ -9,10 +9,11 @@ from src.common.database.database import get_db_session as get_db
 from src.auth.dependencies import get_current_user
 from src.models.models import User, Certificate
 from src.modules.certificates import certificate_service
+from src.modules.dashboard.schemas import CertificateBrief
 
 router = APIRouter(prefix="/certificates", tags=["Certificates"])
 
-@router.get("", response_model=List[dict])
+@router.get("", response_model=List[CertificateBrief])
 async def get_my_certificates(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -20,20 +21,9 @@ async def get_my_certificates(
     """
     List all certificates earned by the current user.
     """
-    certs = await certificate_service.get_user_certificates(current_user.id, db)
-    # Return simple dict or define a schema. Using dict for speed now.
-    return [
-        {
-            "id": str(c.id),
-            "course_id": str(c.course_id),
-            "course_title": c.course.title if c.course else "Unknown Course",
-            "certificate_url": c.certificate_url,
-            "issued_at": c.issued_at
-        }
-        for c in certs
-    ]
+    return await certificate_service.get_user_certificates(current_user.id, db)
 
-@router.get("/{certificate_id}")
+@router.get("/{certificate_id}", response_model=CertificateBrief)
 async def get_certificate(
     certificate_id: UUID,
     current_user: User = Depends(get_current_user),
@@ -49,10 +39,4 @@ async def get_certificate(
     if cert.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized to view this certificate")
         
-    return {
-        "id": str(cert.id),
-        "course_id": str(cert.course_id),
-        "course_title": cert.course.title if cert.course else "Unknown Course",
-        "certificate_url": cert.certificate_url,
-        "issued_at": cert.issued_at
-    }
+    return cert

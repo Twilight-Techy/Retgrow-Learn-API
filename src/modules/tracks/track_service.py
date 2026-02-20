@@ -8,7 +8,7 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models.models import LearningPath, Lesson, Module, Track, TrackCourse
+from src.models.models import Course, LearningPath, Lesson, Module, Track, TrackCourse
 
 async def get_all_tracks(
     db: AsyncSession, 
@@ -99,6 +99,9 @@ async def get_track_curriculum(slug: str, db: AsyncSession) -> List[dict]:
     """
     Returns a list of courses for the given track slug. Each course contains modules
     and each module contains ordered lessons. Matches CurriculumCourseResponse schema.
+
+    Uses eager-loading to fetch the entire Course→Modules→Lessons tree in a single
+    query instead of N+1 individual queries per course and per module.
     """
     # Find the track
     track_result = await db.execute(select(Track).where(Track.slug == slug))
@@ -106,40 +109,30 @@ async def get_track_curriculum(slug: str, db: AsyncSession) -> List[dict]:
     if not track:
         return []
 
-    # Eager-load `course` for every TrackCourse to avoid lazy-load at access time
+    # Single query: TrackCourse → Course → Modules → Lessons (all eager-loaded)
     tc_stmt = (
         select(TrackCourse)
         .where(TrackCourse.track_id == track.id)
         .order_by(TrackCourse.order.asc())
-        .options(selectinload(TrackCourse.course))
+        .options(
+            selectinload(TrackCourse.course)
+            .selectinload(Course.modules)
+            .selectinload(Module.lessons)
+        )
     )
     tc_result = await db.execute(tc_stmt)
     track_course_records = tc_result.scalars().all()
 
     curriculum = []
     for tc in track_course_records:
-        course = tc.course  # now already loaded, no lazy-load
+        course = tc.course
 
-        # Fetch modules for this course (ordered)
-        module_stmt = (
-            select(Module)
-            .where(Module.course_id == course.id)
-            .order_by(Module.order.asc())
-        )
-        module_result = await db.execute(module_stmt)
-        modules = module_result.scalars().all()
+        # Sort modules and lessons in Python (selectinload doesn't guarantee order)
+        sorted_modules = sorted(course.modules, key=lambda m: m.order or 0)
 
         modules_out = []
-        for module in modules:
-            # Fetch lessons for module (ordered)
-            lesson_stmt = (
-                select(Lesson)
-                .where(Lesson.module_id == module.id)
-                .order_by(Lesson.order.asc())
-            )
-            lesson_result = await db.execute(lesson_stmt)
-            lessons = lesson_result.scalars().all()
-
+        for module in sorted_modules:
+            sorted_lessons = sorted(module.lessons, key=lambda l: l.order or 0)
             modules_out.append({
                 "id": str(module.id),
                 "title": module.title,
@@ -147,7 +140,7 @@ async def get_track_curriculum(slug: str, db: AsyncSession) -> List[dict]:
                 "order": module.order,
                 "lessons": [
                     {"id": str(lesson.id), "title": lesson.title, "order": lesson.order}
-                    for lesson in lessons
+                    for lesson in sorted_lessons
                 ],
             })
 

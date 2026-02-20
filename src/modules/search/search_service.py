@@ -1,5 +1,6 @@
 # src/search/search_service.py
 
+import asyncio
 from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -33,35 +34,34 @@ def format_resource(resource: Resource) -> SearchResultItem:
         description=resource.description
     )
 
+async def _search_courses(pattern: str, db: AsyncSession) -> List[SearchResultItem]:
+    stmt = select(Course).where(or_(Course.title.ilike(pattern), Course.description.ilike(pattern)))
+    result = await db.execute(stmt)
+    return [format_course(c) for c in result.scalars().all()]
+
+async def _search_tracks(pattern: str, db: AsyncSession) -> List[SearchResultItem]:
+    stmt = select(Track).where(or_(Track.title.ilike(pattern), Track.description.ilike(pattern)))
+    result = await db.execute(stmt)
+    return [format_track(t) for t in result.scalars().all()]
+
+async def _search_resources(pattern: str, db: AsyncSession) -> List[SearchResultItem]:
+    stmt = select(Resource).where(or_(Resource.title.ilike(pattern), Resource.description.ilike(pattern)))
+    result = await db.execute(stmt)
+    return [format_resource(r) for r in result.scalars().all()]
+
 async def search(query: str, db: AsyncSession) -> SearchResponse:
     pattern = f"%{query}%"
-    
-    # Search courses by title or description.
-    course_stmt = select(Course).where(
-        or_(Course.title.ilike(pattern), Course.description.ilike(pattern))
+
+    # Run all 3 search queries concurrently
+    courses, tracks, resources = await asyncio.gather(
+        _search_courses(pattern, db),
+        _search_tracks(pattern, db),
+        _search_resources(pattern, db),
     )
-    course_result = await db.execute(course_stmt)
-    courses = course_result.scalars().all()
-    formatted_courses = [format_course(course) for course in courses]
-    
-    # Search tracks by title or description.
-    track_stmt = select(Track).where(
-        or_(Track.title.ilike(pattern), Track.description.ilike(pattern))
-    )
-    track_result = await db.execute(track_stmt)
-    tracks = track_result.scalars().all()
-    formatted_tracks = [format_track(track) for track in tracks]
-    
-    # Search resources by title or description.
-    resource_stmt = select(Resource).where(
-        or_(Resource.title.ilike(pattern), Resource.description.ilike(pattern))
-    )
-    resource_result = await db.execute(resource_stmt)
-    resources = resource_result.scalars().all()
-    formatted_resources = [format_resource(resource) for resource in resources]
-    
+
     return SearchResponse(
-        courses=formatted_courses,
-        tracks=formatted_tracks,
-        resources=formatted_resources
+        courses=courses,
+        tracks=tracks,
+        resources=resources
     )
+

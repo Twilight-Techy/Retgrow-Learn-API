@@ -39,10 +39,10 @@ async def get_enrolled_courses(user_id: str, db: AsyncSession) -> List[dict]:
     return courses
 
 # Service function to get recent resources for a user.
-async def get_recent_resources(user_id: str, db: AsyncSession, limit: int = 5) -> List[Dict]:
+async def get_recent_resources(user_id: str, db: AsyncSession, limit: int = 5) -> list:
     """
-    Return recent resources accessed by user as plain dicts:
-    [{ id, title, type, url, track_title }]
+    Return recent resources accessed by user.
+    ORM objects are returned directly — Pydantic's model_validator handles serialization.
     """
     stmt = (
         select(Resource)
@@ -53,19 +53,7 @@ async def get_recent_resources(user_id: str, db: AsyncSession, limit: int = 5) -
         .limit(limit)
     )
     result = await db.execute(stmt)
-    resources = result.scalars().all()
-
-    out = []
-    for r in resources:
-        out.append({
-            "id": str(r.id),
-            "title": r.title,
-            # r.type might be an enum; convert to string safely
-            "type": (r.type.value if hasattr(r.type, "value") else str(r.type)) if r.type is not None else None,
-            "url": r.url,
-            "track_title": (r.track.title if getattr(r, "track", None) else None)
-        })
-    return out
+    return result.scalars().unique().all()
 
 # Service function to get upcoming deadlines.
 async def get_upcoming_deadlines(user_id: str, db: AsyncSession, limit: int = 10, enrolled_courses: Optional[List[dict]] = None) -> List[dict]:
@@ -92,7 +80,6 @@ async def get_upcoming_deadlines(user_id: str, db: AsyncSession, limit: int = 10
     if not course_ids:
         return []
 
-    now = datetime.now(timezone.utc)
 
     stmt = (
         select(Deadline)
@@ -103,31 +90,14 @@ async def get_upcoming_deadlines(user_id: str, db: AsyncSession, limit: int = 10
     )
 
     result = await db.execute(stmt)
-    deadlines = result.scalars().all()
-
-    out = []
-    for d in deadlines:
-        is_overdue = False
-        try:
-            is_overdue = d.due_date is not None and d.due_date < now
-        except Exception:
-            is_overdue = False
-
-        out.append({
-            "id": str(d.id),
-            "title": d.title,
-            "description": d.description,
-            "due_date": d.due_date,              # datetime -> Pydantic will serialize to ISO
-            "course": d.course.title if getattr(d, "course", None) else None,
-            "is_overdue": is_overdue
-        })
-    return out
+    return result.scalars().all()
 
 
-async def get_recent_achievements(user_id: str, db: AsyncSession, limit: int = 5) -> List[dict]:
+async def get_recent_achievements(user_id: str, db: AsyncSession, limit: int = 5) -> list:
     """
     Query the UserAchievement table for the specified user,
     ordered by earned_at descending, and return the top achievements.
+    ORM objects are returned — Pydantic's model_validator flattens Achievement data.
     """
     stmt = (
         select(UserAchievement)
@@ -137,22 +107,7 @@ async def get_recent_achievements(user_id: str, db: AsyncSession, limit: int = 5
         .limit(limit)
     )
     result = await db.execute(stmt)
-    user_achievements = result.scalars().all()
-
-    # Transform the results into dictionaries that include achievement details.
-    # We assume that each UserAchievement instance has an attribute `achievement`
-    # representing the associated Achievement record.
-    recent = []
-    for ua in user_achievements:
-        achievement = ua.achievement
-        recent.append({
-            "id": str(achievement.id),
-            "title": achievement.title,
-            "description": achievement.description,
-            "icon_url": achievement.icon_url,
-            "earned_at": ua.earned_at,
-        })
-    return recent
+    return result.scalars().all()
 
 async def get_progress_overview(user_id: str, db: AsyncSession, limit: int = 0) -> List[dict]:
     """

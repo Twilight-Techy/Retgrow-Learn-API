@@ -7,8 +7,9 @@ import uuid
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
 
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from src.models.models import (
     Subscription,
@@ -47,7 +48,7 @@ async def process_due_subscriptions(db: AsyncSession) -> Dict[str, Any]:
         )
     )
     
-    result = await db.execute(stmt)
+    result = await db.execute(stmt.options(selectinload(Subscription.user)))
     all_subscriptions = result.scalars().all()
     
     # 2. In-Memory Filter: Group by User ID and pick the BEST ONE
@@ -83,7 +84,7 @@ async def process_due_subscriptions(db: AsyncSession) -> Dict[str, Any]:
     for sub in subscriptions_to_process:
         results["processed"] += 1
         try:
-            success = await renew_subscription(sub, db)
+            success = await renew_subscription(sub, sub.user, db)
             if success:
                 results["success"] += 1
                 results["details"].append(f"Renewed: {sub.id} ({sub.user_id})")
@@ -97,13 +98,11 @@ async def process_due_subscriptions(db: AsyncSession) -> Dict[str, Any]:
             
     return results
 
-async def renew_subscription(subscription: Subscription, db: AsyncSession) -> bool:
+async def renew_subscription(subscription: Subscription, user: User, db: AsyncSession) -> bool:
     """
     Attempt to charge and renew a single subscription.
+    User is passed in (pre-loaded) to avoid per-subscription DB lookups.
     """
-    user_result = await db.execute(select(User).where(User.id == subscription.user_id))
-    user = user_result.scalars().first()
-    
     if not user:
         logger.error(f"User not found for subscription {subscription.id}")
         return False

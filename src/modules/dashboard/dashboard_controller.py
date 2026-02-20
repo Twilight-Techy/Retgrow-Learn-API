@@ -32,17 +32,8 @@ async def get_all_dashboard_data(
         certificate_service.get_user_certificates(current_user.id, db),
     )
 
-    # Format certificates
-    dashboard_data["certificates"] = [
-        {
-            "id": str(c.id),
-            "course_id": str(c.course_id),
-            "course_title": c.course.title if c.course else "Unknown Course",
-            "certificate_url": c.certificate_url,
-            "issued_at": c.issued_at,
-        }
-        for c in certs
-    ]
+    # CertificateBrief's model_validator handles ORM → schema mapping
+    dashboard_data["certificates"] = certs
 
     return dashboard_data
 

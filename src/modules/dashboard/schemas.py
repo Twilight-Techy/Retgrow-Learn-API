@@ -1,9 +1,9 @@
 # src/dashboard/schemas.py
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 from uuid import UUID
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from src.models.models import CourseLevel
 
@@ -21,12 +21,26 @@ class RecentResourceResponse(BaseModel):
     id: UUID
     title: str
     description: Optional[str] = None
-    type: str
+    type: Optional[str] = None
     url: str
     track_title: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+    @model_validator(mode='before')
+    @classmethod
+    def from_orm(cls, data):
+        if isinstance(data, dict):
+            return data
+        return {
+            'id': data.id,
+            'title': data.title,
+            'description': data.description,
+            'type': data.type.value if hasattr(data.type, 'value') else str(data.type) if data.type else None,
+            'url': data.url,
+            'track_title': data.track.title if getattr(data, 'track', None) else None,
+        }
 
 class DeadlineResponse(BaseModel):
     id: UUID
@@ -34,19 +48,56 @@ class DeadlineResponse(BaseModel):
     description: Optional[str] = None
     due_date: datetime
     course: Optional[str] = None
-    is_overdue: bool
+    is_overdue: bool = False
 
     class Config:
         from_attributes = True
+
+    @model_validator(mode='before')
+    @classmethod
+    def from_orm(cls, data):
+        if isinstance(data, dict):
+            return data
+        is_overdue = False
+        try:
+            is_overdue = data.due_date is not None and data.due_date < datetime.now(timezone.utc)
+        except Exception:
+            pass
+        return {
+            'id': data.id,
+            'title': data.title,
+            'description': data.description,
+            'due_date': data.due_date,
+            'course': data.course.title if getattr(data, 'course', None) else None,
+            'is_overdue': is_overdue,
+        }
 
 class RecentAchievementResponse(BaseModel):
     id: UUID
     title: str
     description: str | None = None
+    icon_url: str | None = None
     earned_at: datetime
 
     class Config:
         from_attributes = True
+
+    @model_validator(mode='before')
+    @classmethod
+    def from_orm(cls, data):
+        if isinstance(data, dict):
+            return data
+        # Flatten UserAchievement -> Achievement fields
+        achievement = getattr(data, 'achievement', None)
+        if achievement:
+            return {
+                'id': achievement.id,
+                'title': achievement.title,
+                'description': achievement.description,
+                'icon_url': getattr(achievement, 'icon_url', None),
+                'earned_at': data.earned_at,
+            }
+        return data
 
 class ProgressOverviewItem(BaseModel):
     name: str
@@ -113,6 +164,19 @@ class CertificateBrief(BaseModel):
 
     class Config:
         from_attributes = True
+
+    @model_validator(mode='before')
+    @classmethod
+    def from_orm(cls, data):
+        if isinstance(data, dict):
+            return data
+        return {
+            'id': str(data.id),
+            'course_id': str(data.course_id),
+            'course_title': data.course.title if getattr(data, 'course', None) else 'Unknown Course',
+            'certificate_url': getattr(data, 'certificate_url', None),
+            'issued_at': getattr(data, 'issued_at', None),
+        }
 
 
 class AggregatedDashboardResponse(BaseModel):
