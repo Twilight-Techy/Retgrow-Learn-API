@@ -1,5 +1,7 @@
 # src/dashboard/dashboard_service.py
 
+import asyncio
+
 from typing import Dict, List, Optional
 from sqlalchemy import func
 from sqlalchemy.future import select
@@ -66,13 +68,17 @@ async def get_recent_resources(user_id: str, db: AsyncSession, limit: int = 5) -
     return out
 
 # Service function to get upcoming deadlines.
-async def get_upcoming_deadlines(user_id: str, db: AsyncSession, limit: int = 10) -> List[dict]:
+async def get_upcoming_deadlines(user_id: str, db: AsyncSession, limit: int = 10, enrolled_courses: Optional[List[dict]] = None) -> List[dict]:
     """
     Retrieve deadlines for the user's enrolled courses.
     Includes deadlines in the past (marked as is_overdue=True) and future.
     Results are ordered by due_date ascending (earliest first).
+
+    Args:
+        enrolled_courses: If provided, skips the extra DB query to fetch them.
     """
-    enrolled_courses = await get_enrolled_courses(user_id, db)
+    if enrolled_courses is None:
+        enrolled_courses = await get_enrolled_courses(user_id, db)
 
     # Build course_ids robustly for both dicts and ORM objects
     course_ids = []
@@ -119,10 +125,14 @@ async def get_upcoming_deadlines(user_id: str, db: AsyncSession, limit: int = 10
 
 # Service function to aggregate dashboard data.
 async def get_dashboard_data(user_id: str, db: AsyncSession) -> dict:
-    enrolled_courses = await get_enrolled_courses(user_id, db)
-    recent_resources = await get_recent_resources(user_id, db)
-    upcoming_deadlines = await get_upcoming_deadlines(user_id, db)
-    
+    # Run independent queries in parallel
+    enrolled_courses, recent_resources = await asyncio.gather(
+        get_enrolled_courses(user_id, db),
+        get_recent_resources(user_id, db),
+    )
+    # Pass pre-fetched courses to avoid a duplicate query
+    upcoming_deadlines = await get_upcoming_deadlines(user_id, db, enrolled_courses=enrolled_courses)
+
     return {
         "enrolled_courses": enrolled_courses,
         "recent_resources": recent_resources,
@@ -230,21 +240,22 @@ async def get_recommended_courses(user_id: str, db: AsyncSession) -> List[Dict]:
 
     track_id = learning_path.track_id
 
-    # 2) Collect enrolled course ids
-    uc_result = await db.execute(
-        select(UserCourse.course_id).where(UserCourse.user_id == user_id)
-    )
-    enrolled_course_ids = {row[0] for row in uc_result.all()}
-
-    # 3) Get courses for the track (ordered by TrackCourse.order)
-    stmt = (
+    # 2) Collect enrolled course ids and track courses in parallel (independent queries)
+    uc_stmt = select(UserCourse.course_id).where(UserCourse.user_id == user_id)
+    tc_stmt = (
         select(Course)
         .join(TrackCourse, TrackCourse.course_id == Course.id)
         .where(TrackCourse.track_id == track_id)
         .order_by(TrackCourse.order.asc())
     )
-    result = await db.execute(stmt)
-    courses_in_track = result.scalars().all()
+
+    uc_result, tc_result = await asyncio.gather(
+        db.execute(uc_stmt),
+        db.execute(tc_stmt),
+    )
+
+    enrolled_course_ids = set(uc_result.scalars().all())
+    courses_in_track = tc_result.scalars().all()
 
     # 4) Build response list of dicts (filter out enrolled)
     recommended = []
