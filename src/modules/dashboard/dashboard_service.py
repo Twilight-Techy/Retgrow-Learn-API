@@ -123,21 +123,6 @@ async def get_upcoming_deadlines(user_id: str, db: AsyncSession, limit: int = 10
         })
     return out
 
-# Service function to aggregate dashboard data.
-async def get_dashboard_data(user_id: str, db: AsyncSession) -> dict:
-    # Run independent queries in parallel
-    enrolled_courses, recent_resources = await asyncio.gather(
-        get_enrolled_courses(user_id, db),
-        get_recent_resources(user_id, db),
-    )
-    # Pass pre-fetched courses to avoid a duplicate query
-    upcoming_deadlines = await get_upcoming_deadlines(user_id, db, enrolled_courses=enrolled_courses)
-
-    return {
-        "enrolled_courses": enrolled_courses,
-        "recent_resources": recent_resources,
-        "upcoming_deadlines": upcoming_deadlines
-    }
 
 async def get_recent_achievements(user_id: str, db: AsyncSession, limit: int = 5) -> List[dict]:
     """
@@ -339,3 +324,40 @@ async def get_active_learning_path(user_id: str, db: AsyncSession, course_limit:
     }
 
     return resp
+
+
+async def get_all_dashboard_data(user_id: str, db: AsyncSession) -> dict:
+    """
+    Fetch ALL dashboard data in a single call using asyncio.gather().
+    This replaces 7+ individual API calls from the frontend with one round-trip.
+    """
+    (
+        enrolled_courses,
+        recent_resources,
+        recent_achievements,
+        progress_overview,
+        recommended_courses,
+        learning_path,
+    ) = await asyncio.gather(
+        get_enrolled_courses(user_id, db),
+        get_recent_resources(user_id, db),
+        get_recent_achievements(user_id, db),
+        get_progress_overview(user_id, db),
+        get_recommended_courses(user_id, db),
+        get_active_learning_path(user_id, db, course_limit=5),
+    )
+
+    # Depends on enrolled_courses, so run after gather
+    upcoming_deadlines = await get_upcoming_deadlines(
+        user_id, db, enrolled_courses=enrolled_courses
+    )
+
+    return {
+        "enrolled_courses": enrolled_courses,
+        "recent_resources": recent_resources,
+        "upcoming_deadlines": upcoming_deadlines,
+        "recent_achievements": recent_achievements,
+        "progress_overview": progress_overview,
+        "recommended_courses": recommended_courses,
+        "learning_path": learning_path,
+    }

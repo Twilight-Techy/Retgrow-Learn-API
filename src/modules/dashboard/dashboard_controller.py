@@ -1,29 +1,50 @@
 # src/dashboard/dashboard_controller.py
 
+import asyncio
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 
 from src.modules.dashboard import dashboard_service, schemas
+from src.modules.certificates import certificate_service
 from src.common.database.database import get_db_session
 from src.auth.dependencies import get_current_user  # Assumes this is implemented
 from src.models.models import User
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
-# GET /dashboard/profile – Aggregated dashboard data.
-@router.get("/profile", response_model=schemas.DashboardResponse)
-async def get_dashboard(
+
+# GET /dashboard/all – Single aggregated endpoint for the entire dashboard page.
+@router.get("/all", response_model=schemas.AggregatedDashboardResponse)
+async def get_all_dashboard_data(
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db_session)
+    db: AsyncSession = Depends(get_db_session),
 ):
-    data = await dashboard_service.get_dashboard_data(str(current_user.id), db)
-    if not data:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Dashboard data not found."
-        )
-    return data
+    """
+    Returns all dashboard data in a single response.
+    Runs all queries concurrently using asyncio.gather().
+    """
+    user_id = str(current_user.id)
+
+    # Run dashboard data + certificates in parallel
+    dashboard_data, certs = await asyncio.gather(
+        dashboard_service.get_all_dashboard_data(user_id, db),
+        certificate_service.get_user_certificates(current_user.id, db),
+    )
+
+    # Format certificates
+    dashboard_data["certificates"] = [
+        {
+            "id": str(c.id),
+            "course_id": str(c.course_id),
+            "course_title": c.course.title if c.course else "Unknown Course",
+            "certificate_url": c.certificate_url,
+            "issued_at": c.issued_at,
+        }
+        for c in certs
+    ]
+
+    return dashboard_data
 
 # GET /dashboard/enrolled-courses – List enrolled courses.
 @router.get("/enrolled-courses", response_model=List[schemas.EnrolledCourseResponse])

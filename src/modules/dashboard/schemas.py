@@ -39,12 +39,6 @@ class DeadlineResponse(BaseModel):
     class Config:
         from_attributes = True
 
-# Dashboard aggregated response.
-class DashboardResponse(BaseModel):
-    enrolled_courses: List[EnrolledCourseResponse]
-    recent_resources: List[RecentResourceResponse]
-    upcoming_deadlines: List[DeadlineResponse]
-
 class RecentAchievementResponse(BaseModel):
     id: UUID
     title: str
@@ -105,6 +99,32 @@ class LearningPathResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     completed_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class CertificateBrief(BaseModel):
+    id: str
+    course_id: str
+    course_title: str
+    certificate_url: Optional[str] = None
+    issued_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class AggregatedDashboardResponse(BaseModel):
+    """Single response combining all dashboard data."""
+    enrolled_courses: List[EnrolledCourseResponse] = []
+    recent_resources: List[RecentResourceResponse] = []
+    upcoming_deadlines: List[DeadlineResponse] = []
+    recent_achievements: List[RecentAchievementResponse] = []
+    progress_overview: List[ProgressOverviewItem] = []
+    recommended_courses: List[CourseResponse] = []
+    learning_path: Optional[LearningPathResponse] = None
+    certificates: List[CertificateBrief] = []
 
     class Config:
         from_attributes = True
