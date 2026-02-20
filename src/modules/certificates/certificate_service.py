@@ -139,6 +139,15 @@ async def get_user_certificates(user_id: uuid.UUID, db: AsyncSession) -> List[Ce
     result = await db.execute(stmt)
     return result.scalars().all()
 
+async def get_certificate_by_user_and_course(user_id: uuid.UUID, course_id: uuid.UUID, db: AsyncSession) -> Optional[Certificate]:
+    """Get a specific certificate for a user and course combination."""
+    stmt = (
+        select(Certificate)
+        .where(Certificate.user_id == user_id, Certificate.course_id == course_id)
+    )
+    result = await db.execute(stmt)
+    return result.scalars().first()
+
 async def get_certificate_by_id(cert_id: uuid.UUID, db: AsyncSession) -> Optional[Certificate]:
     stmt = (
         select(Certificate)

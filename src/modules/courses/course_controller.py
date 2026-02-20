@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.common.utils.global_functions import ensure_instructor_or_admin
 from src.modules.courses import course_service, schemas
+from src.modules.certificates import certificate_service
 from src.common.database.database import get_db_session
 from src.auth.dependencies import get_current_user  # Assumes implementation exists
 from src.models.models import User
@@ -200,7 +201,7 @@ async def complete_course(
     # If they don't, we can either strict check or just try.
     # Let's trust check_and_mark_course_completion.
     
-    cert = await course_service.check_and_mark_course_completion(current_user.id, str(course_id), db)
+    cert = await course_service.check_and_mark_course_completion(current_user, str(course_id), db)
     
     # If cert is returned, we have success.
     # If None, either not 100% or not eligible.
@@ -211,12 +212,8 @@ async def complete_course(
         return {"certificate_id": str(cert.id), "message": "Course completed and certificate generated."}
     
     # Check if a certificate exists anyway (e.g. generated previously)
-    from src.modules.certificates import certificate_service
-    existing_certs = await certificate_service.get_user_certificates(current_user.id, db)
-    # Filter for this course
-    # This acts as a fallback if check_and_mark returned None because it was ALREADY completed previously
-    for c in existing_certs:
-        if str(c.course_id) == str(course_id):
-             return {"certificate_id": str(c.id), "message": "Certificate retrieved."}
-             
+    existing_cert = await certificate_service.get_certificate_by_user_and_course(current_user.id, course_id, db)
+    if existing_cert:
+        return {"certificate_id": str(existing_cert.id), "message": "Certificate retrieved."}
+
     return {"certificate_id": None, "message": "Course mark as completed, but no certificate generated (eligibility or progress issue)."}

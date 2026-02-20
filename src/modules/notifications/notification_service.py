@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timezone
 
-from src.models.models import Notification, UserNotification, UserCourse, LearningPath
+from src.models.models import Notification, NotificationType, UserNotification, UserCourse, LearningPath
 from sqlalchemy.orm import selectinload
 
 async def _ensure_user_meta(user_id: str, db: AsyncSession) -> UserNotification:
@@ -140,17 +140,36 @@ async def mark_notification_as_read(notification_id: str, user_id: str, db: Asyn
     await db.commit()
     return True
 
-async def create_notification(user_id: str, notif_type: str, message: str, db: AsyncSession):
+async def create_notification(
+    user_id: str,
+    title: str,
+    message: str,
+    db: AsyncSession,
+    notif_type: NotificationType = NotificationType.INFO,
+    commit: bool = True,
+):
     """
     Create a notification record for a user.
+
+    Args:
+        user_id: The user to notify.
+        title: Short title for the notification.
+        message: Full notification message.
+        db: Database session.
+        notif_type: NotificationType enum value (default: INFO).
+        commit: If False, only adds to session without committing.
+                Caller is responsible for committing the transaction.
+                Useful for batch operations to avoid N sequential commits.
     """
     new_notification = Notification(
         user_id=user_id,
+        title=title,
         type=notif_type,
         message=message,
         read=False,
     )
     db.add(new_notification)
-    await db.commit()
-    await db.refresh(new_notification)
+    if commit:
+        await db.commit()
+        await db.refresh(new_notification)
     return new_notification
