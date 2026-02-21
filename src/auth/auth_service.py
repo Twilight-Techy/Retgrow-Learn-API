@@ -185,7 +185,7 @@ async def login_user(email: str, password: str, db: AsyncSession):
     user = await authenticate_user(email, password, db)
     if not user:
         return None
-    record_login_event(user.id, db)
+    await record_login_event(user.id, db)
     access_token_expires = timedelta(minutes=settings.JWT_EXPIRATION_MINUTES)
     access_token = create_access_token(data={"sub": str(user.id)}, expires_delta=access_token_expires)
     refresh_token = create_refresh_token(data={"sub": str(user.id)})

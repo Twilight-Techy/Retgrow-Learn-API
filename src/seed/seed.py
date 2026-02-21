@@ -5,7 +5,7 @@ Populates database with comprehensive test data
 
 import asyncio
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List
 import random
 from passlib.context import CryptContext
@@ -765,7 +765,7 @@ class DatabaseSeeder:
             print("⚠️  No courses available to attach deadlines to. Skipping deadlines.")
             return
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         for i in range(8):
             course_id = random.choice(self.course_ids)
             # Mix of past and future due dates

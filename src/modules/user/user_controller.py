@@ -28,6 +28,9 @@ async def get_profile(
     # Get active subscription
     subscription = await subscription_service.get_active_subscription(current_user.id, db)
     
+    # Refresh user to avoid "MissingGreenlet" or expired object issues if subscription check committed
+    await db.refresh(current_user)
+    
     # Create response with subscription details
     response = schemas.ProfileResponse.model_validate(current_user)
     if subscription:

@@ -2,7 +2,7 @@
 Subscription service handling subscription logic.
 """
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any, List
 from sqlalchemy import select, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,7 +20,7 @@ from src.modules.payments.schemas import get_plan_amount
 
 def calculate_end_date(billing_cycle: BillingCycle) -> datetime:
     """Calculate subscription end date based on billing cycle."""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     if billing_cycle == BillingCycle.MONTHLY:
         return now + timedelta(days=30)
     else:
@@ -37,7 +37,7 @@ async def get_active_subscription(
     2. Lazy expires them if end_date passed.
     3. If none, returns most recent subscription (Expired/Cancelled).
     """
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     
     # 1. Try to find a logically active subscription
     stmt = select(Subscription).where(
@@ -82,7 +82,7 @@ async def get_best_valid_subscription(
     Priority: PRO > FOCUSED > FREE.
     Grace Period: Allows subscriptions expired < 7 days ago.
     """
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     seven_days_ago = now - timedelta(days=7)
     
     # 1. Fetch valid candidates (including grace period)
@@ -202,7 +202,7 @@ async def create_new_subscription_record(
         plan=plan,
         billing_cycle=billing_cycle,
         status=SubscriptionStatus.ACTIVE,
-        start_date=datetime.utcnow(),
+        start_date=datetime.now(timezone.utc),
         end_date=calculate_end_date(billing_cycle),
         payment_provider=provider,
         auto_renew=True

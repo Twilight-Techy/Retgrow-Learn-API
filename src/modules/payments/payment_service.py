@@ -3,7 +3,7 @@ Payment service handling subscription and transaction logic.
 """
 import uuid
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Optional, Dict, Any
 from sqlalchemy import select, and_
@@ -51,7 +51,7 @@ def generate_reference() -> str:
 
 def calculate_end_date(billing_cycle: BillingCycle) -> datetime:
     """Calculate subscription end date based on billing cycle."""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     if billing_cycle == BillingCycle.MONTHLY:
         return now + timedelta(days=30)
     else:
@@ -228,7 +228,7 @@ async def verify_and_activate_subscription(
     if verify_result.success:
         # Update transaction
         transaction.status = PaymentStatus.SUCCESS
-        transaction.completed_at = datetime.utcnow()
+        transaction.completed_at = datetime.now(timezone.utc)
         transaction.external_reference = verify_result.external_reference
         transaction.payment_metadata = {
             **(transaction.payment_metadata or {}),

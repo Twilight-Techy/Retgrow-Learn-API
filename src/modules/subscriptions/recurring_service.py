@@ -4,7 +4,7 @@ Service for handling recurring subscription payments.
 """
 import logging
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Dict, Any
 
 from sqlalchemy import select, and_, or_
@@ -31,7 +31,7 @@ async def process_due_subscriptions(db: AsyncSession) -> Dict[str, Any]:
     """
     Find and charge subscriptions due for renewal.
     """
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     
     # 1. Broad Query: Find ALL potential due subscriptions
     # Criteria: Active/Expired, Auto-Renew, End Date passed (or imminent), Has Token
@@ -184,7 +184,7 @@ async def renew_subscription(subscription: Subscription, user: User, db: AsyncSe
                 "plan_name": subscription.plan.value.capitalize(),
                 "billing_cycle": subscription.billing_cycle.value.capitalize(),
                 "amount": f"NGN {amount:,.2f}",
-                "date": datetime.utcnow().strftime("%B %d, %Y"),
+                "date": datetime.now(timezone.utc).strftime("%B %d, %Y"),
                 "next_renewal_date": new_end_date.strftime("%B %d, %Y")
             }
             await send_subscription_email(

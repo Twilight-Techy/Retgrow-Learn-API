@@ -1,5 +1,5 @@
 
-from datetime import datetime
+from datetime import datetime, timezone
 import io
 import logging
 import os
@@ -100,7 +100,7 @@ async def generate_certificate(user: User, course: Course, db: AsyncSession) -> 
         user_id=user.id,
         course_id=course.id,
         certificate_url=blob_url,
-        issued_at=datetime.utcnow()
+        issued_at=datetime.now(timezone.utc)
     )
     db.add(new_cert)
     try:
@@ -324,7 +324,7 @@ async def _create_certificate_pdf(user: User, course: Course) -> bytes:
     current_y -= 40
     c.setFont(DATE_FONT, 14)
     c.setFillColor(MEDIUM_GRAY)
-    date_str = datetime.utcnow().strftime("%B %d, %Y")
+    date_str = datetime.now(timezone.utc).strftime("%B %d, %Y")
     c.drawCentredString(mid_x, current_y, f"on {date_str}.")
 
     # -----------------------------------------------------------
