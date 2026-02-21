@@ -26,7 +26,6 @@ def calculate_level_progress(xp: int) -> dict:
     Returns:
         dict: A dictionary with keys 'level', 'xp', and 'nextLevelXp'.
     """
-    level = xp // 500  # Each level requires 500 XP.
-    level += 1
-    next_level_xp = (level + 1) * 500
+    level = (xp // 500) + 1  # Each level requires 500 XP.
+    next_level_xp = level * 500
     return {"level": level, "xp": xp, "nextLevelXp": next_level_xp}
