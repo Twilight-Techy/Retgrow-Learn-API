@@ -1,8 +1,11 @@
+import logging
 from typing import AsyncGenerator
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from src.common.config import settings  # Import the settings object
+
+logger = logging.getLogger(__name__)
 
 # SQLAlchemy async engine and session setup
 engine = create_async_engine(
@@ -23,18 +26,18 @@ async def connect_to_db():
         # Test connection by executing a simple query
         async with engine.begin() as conn:
             await conn.execute(text("SELECT 1"))
-            print("Database connected successfully!")
+            logger.info("Database connected successfully")
     except Exception as e:
-        print(f"Error connecting to the database: {e}")
+        logger.error("Error connecting to the database: %s", e)
         raise
 
 async def close_db_connection():
     """Close the database connection."""
     try:
         await engine.dispose()
-        print("Database connection closed successfully!")
+        logger.info("Database connection closed successfully")
     except Exception as e:
-        print(f"Error closing the database connection: {e}")
+        logger.error("Error closing the database connection: %s", e)
         raise
 
 # Dependency for using a session in routes

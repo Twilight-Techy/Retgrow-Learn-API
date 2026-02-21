@@ -1,0 +1,92 @@
+# render.yaml — Render Blueprint for Retgrow Learn API
+# Docs: https://docs.render.com/blueprint-spec
+
+services:
+  - type: web
+    name: retgrow-learn-api
+    runtime: python
+    region: oregon
+
+    # Build
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn src.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
+
+    # Auto-deploy on push to main
+    autoDeploy: true
+
+    # Health check
+    healthCheckPath: /health
+
+    # Plan (free tier to start — upgrade when needed)
+    plan: free
+
+    # Environment variables (set actual values in Render dashboard)
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DEBUG
+        value: "False"
+      - key: FRONTEND_URL
+        sync: false # Set in Render dashboard (your Vercel URL)
+      - key: SUPPORT_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false # Set in Render dashboard (Neon connection string)
+      - key: ALEMBIC_DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true # Render auto-generates a secure random value
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: JWT_EXPIRATION_MINUTES
+        value: "1440"
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_EXPIRATION_DAYS
+        value: "7"
+      - key: ALLOWED_ORIGINS
+        sync: false # Set to your Vercel domain, e.g. ["https://retgrow.vercel.app"]
+      - key: LOG_LEVEL
+        value: info
+
+      # Email
+      - key: EMAIL_SENDER
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "465"
+      - key: SMTP_USE_TLS
+        value: "True"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: CONTACT_RECIPIENT
+        sync: false
+
+      # Payments
+      - key: PAYSTACK_SECRET_KEY
+        sync: false
+      - key: PAYSTACK_PUBLIC_KEY
+        sync: false
+      - key: OPAY_PUBLIC_KEY
+        sync: false
+      - key: OPAY_SECRET_KEY
+        sync: false
+      - key: OPAY_MERCHANT_ID
+        sync: false
+      - key: OPAY_ENVIRONMENT
+        value: sandbox
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+
+      # Misc
+      - key: CRON_SECRET
+        generateValue: true
+      - key: BLOB_READ_WRITE_TOKEN
+        sync: false
+      - key: PYTHON_VERSION
+        value: "3.13.0"

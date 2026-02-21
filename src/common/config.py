@@ -1,7 +1,7 @@
 import os
 from typing import List
 from dotenv import load_dotenv
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings
 
 # Load environment variables from the correct .env file
@@ -45,8 +45,8 @@ class Settings(BaseSettings):
     OPAY_SECRET_KEY: str = ""
     OPAY_MERCHANT_ID: str = ""
     OPAY_ENVIRONMENT: str = "sandbox"
-    STRIPE_SECRET_KEY: str = ""
-    STRIPE_WEBHOOK_SECRET: str = ""
+    STRIPE_SECRET_KEY: str = ""       # Optional — not yet configured
+    STRIPE_WEBHOOK_SECRET: str = ""   # Optional — not yet configured
     CRON_SECRET: str = "secret"
 
     # Uncomment if you want to support comma-separated ALLOWED_ORIGINS strings
@@ -55,5 +55,24 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return [origin.strip() for origin in value.split(",") if origin.strip()]
         return value
+
+    @model_validator(mode="after")
+    def validate_production_secrets(self):
+        """Ensure critical secrets are set when running in production."""
+        if self.APP_ENV == "production":
+            missing = []
+            # Payment keys required in production
+            for key in [
+                "PAYSTACK_SECRET_KEY", "PAYSTACK_PUBLIC_KEY",
+                # "OPAY_PUBLIC_KEY", "OPAY_SECRET_KEY", "OPAY_MERCHANT_ID",
+                # "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET",
+            ]:
+                if not getattr(self, key):
+                    missing.append(key)
+            if missing:
+                raise ValueError(
+                    f"Missing required secrets for production: {', '.join(missing)}"
+                )
+        return self
 
 settings = Settings()

@@ -1,6 +1,7 @@
 # src/main.py
 
 # import asyncio
+import logging
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -14,6 +15,13 @@ from src.common.config import settings
 from src.common.rate_limit import limiter
 from src.router.routers import include_routers
 # from src.common.utils.email import test_email
+
+# Centralized logging configuration
+logging.basicConfig(
+    level=getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO),
+    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 # Lifespan context manager for startup and shutdown events
 @asynccontextmanager

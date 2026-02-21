@@ -1,3 +1,4 @@
+import logging
 import aiosmtplib
 from email.message import EmailMessage
 from typing import List, Optional, Any, Dict
@@ -5,6 +6,8 @@ import jinja2
 import os
 from datetime import datetime
 from src.common.config import settings
+
+logger = logging.getLogger(__name__)
 
 # Configure Jinja2 environment
 # src/common/utils/email_service.py -> src/templates/emails
@@ -19,7 +22,7 @@ def render_template(template_name: str, context: Dict[str, Any]) -> str:
         template = template_env.get_template(template_name)
         return template.render(**context)
     except Exception as e:
-        print(f"Error rendering template {template_name}: {e}")
+        logger.error("Error rendering template %s: %s", template_name, e)
         return ""
 
 async def send_email(subject: str, body: str, recipients: List[str], html_body: Optional[str] = None) -> None:
@@ -32,7 +35,7 @@ async def send_email(subject: str, body: str, recipients: List[str], html_body: 
         recipients (List[str]): List of recipient email addresses.
     """
     if not settings.SMTP_HOST:
-        print(f"[MOCK EMAIL] To: {recipients}, Subject: {subject}\nBody: {body[:100]}...")
+        logger.debug("[MOCK EMAIL] To: %s, Subject: %s", recipients, subject)
         return
 
     message = EmailMessage()
@@ -105,7 +108,7 @@ async def send_subscription_email(type: str, user_email: str, user_first_name: s
     subject = subject_map.get(type, "Subscription Notification")
     
     if not template_file:
-        print(f"Unknown subscription email type: {type}")
+        logger.warning("Unknown subscription email type: %s", type)
         return
         
     # Add common links to context
