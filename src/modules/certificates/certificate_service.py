@@ -1,6 +1,7 @@
 
 from datetime import datetime
 import io
+import logging
 import os
 import uuid
 import sys
@@ -30,6 +31,8 @@ BLOB_READ_WRITE_TOKEN = os.getenv("BLOB_READ_WRITE_TOKEN")
 from src.modules.subscriptions import subscription_service
 from src.models.models import SubscriptionPlan
 
+logger = logging.getLogger(__name__)
+
 # Path to assets
 ASSETS_DIR = os.path.join(os.path.dirname(__file__), "assets")
 CUSTOM_FONT_DIR = os.path.join(ASSETS_DIR, "fonts")
@@ -44,7 +47,7 @@ try:
         pdfmetrics.registerFont(TTFont('Vera', os.path.join(FONT_DIR, "Vera.ttf")))
         pdfmetrics.registerFont(TTFont('VeraBd', os.path.join(FONT_DIR, "VeraBd.ttf")))
 except Exception as e:
-    print(f"Error registering Vera font: {e}")
+    logger.warning("Error registering Vera font: %s", e)
 
 # Register GreatVibes (Script font for "Certificate of Completion")
 GREAT_VIBES_PATH = os.path.join(CUSTOM_FONT_DIR, "GreatVibes-Regular.ttf")
@@ -54,7 +57,7 @@ try:
         pdfmetrics.registerFont(TTFont('GreatVibes', GREAT_VIBES_PATH))
         HAS_GREAT_VIBES = True
 except Exception as e:
-    print(f"Error registering GreatVibes font: {e}")
+    logger.warning("Error registering GreatVibes font: %s", e)
 
 # Font Constants
 BRAND_FONT = "VeraBd" if "VeraBd" in pdfmetrics.getRegisteredFontNames() else "Helvetica-Bold"
@@ -92,7 +95,7 @@ async def generate_certificate(user: User, course: Course, db: AsyncSession) -> 
     if not blob_url:
         raise Exception("Failed to upload certificate to storage.")
 
-    print(f"DEBUG: Generating certificate for User {user.id}, Course {course.id}")
+    logger.debug("Generating certificate for User %s, Course %s", user.id, course.id)
     new_cert = Certificate(
         user_id=user.id,
         course_id=course.id,
@@ -103,11 +106,11 @@ async def generate_certificate(user: User, course: Course, db: AsyncSession) -> 
     try:
         await db.commit()
         await db.refresh(new_cert)
-        print(f"DEBUG: Certificate saved to DB: {new_cert.id}")
+        logger.debug("Certificate saved to DB: %s", new_cert.id)
     except IntegrityError:
         # If unique constraint violated (race condition), return the existing one
         await db.rollback()
-        print(f"DEBUG: IntegrityError - certificate likely exists. Fetching existing.")
+        logger.debug("IntegrityError - certificate likely exists. Fetching existing.")
         
         stmt = select(Certificate).where(
             Certificate.user_id == user.id,
@@ -119,11 +122,11 @@ async def generate_certificate(user: User, course: Course, db: AsyncSession) -> 
             return existing_cert
         else:
             # Should not happen if IntegrityError was due to duplicate
-            print("DEBUG: IntegrityError caught but no existing certificate found?")
+            logger.warning("IntegrityError caught but no existing certificate found")
             return None
             
     except Exception as e:
-        print(f"DEBUG: Failed to save certificate to DB: {e}")
+        logger.error("Failed to save certificate to DB: %s", e)
         await db.rollback()
         raise e
     
@@ -244,7 +247,7 @@ async def _create_certificate_pdf(user: User, course: Course) -> bytes:
         try:
             c.drawImage(bg_path, 0, 0, width=width, height=height, preserveAspectRatio=False, mask='auto')
         except Exception as e:
-            print(f"Error loading background image: {e}")
+            logger.error("Error loading background image: %s", e)
             _draw_background_pattern(c, width, height)
     else:
         _draw_background_pattern(c, width, height)
@@ -371,7 +374,7 @@ async def _upload_to_blob(file_data: bytes, filename: str) -> Optional[str]:
     """
     token = os.environ.get("BLOB_READ_WRITE_TOKEN")
     if not token:
-        print("BLOB_READ_WRITE_TOKEN not set")
+        logger.error("BLOB_READ_WRITE_TOKEN not set")
         return None
 
     url = f"{VERCEL_BLOB_API_URL}/{filename}"
@@ -388,11 +391,8 @@ async def _upload_to_blob(file_data: bytes, filename: str) -> Optional[str]:
                 data = response.json()
                 return data.get("url")
             else:
-                print(f"Blob upload failed: {response.status_code} {response.text}")
+                logger.error("Blob upload failed: %s %s", response.status_code, response.text)
                 raise Exception(f"Blob upload failed: {response.text}")
         except Exception as e:
-            print(f"Blob upload error type: {type(e)}")
-            print(f"Blob upload error repr: {repr(e)}")
-            import traceback
-            traceback.print_exc()
+            logger.exception("Blob upload error")
             raise e

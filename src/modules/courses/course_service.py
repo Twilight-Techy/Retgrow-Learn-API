@@ -1,15 +1,18 @@
 # src/courses/course_service.py
 
-from datetime import datetime, timezone 
+from datetime import datetime, timezone
 from typing import List, Optional
 from sqlalchemy import or_
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
+import logging
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.orm import selectinload
 from src.models.models import Course, Lesson, Module, NotificationType, Track, TrackCourse, UserCourse, User, UserLesson, Certificate
 from src.modules.notifications.notification_service import create_notification
 from src.modules.subscriptions import access_control_service
+
+logger = logging.getLogger(__name__)
 
 # Retrieve all courses
 async def get_all_courses(
@@ -396,7 +399,7 @@ async def check_and_mark_course_completion(user: User, course_id: str, db: Async
                 cert = await certificate_service.generate_certificate(user, course, db)
                 return cert
             except Exception as e:
-                print(f"Error generating certificate: {e}")
+                logger.error("Error generating certificate: %s", e)
                 # Don't fail the completion if cert generation fails?
                 return None
     return None

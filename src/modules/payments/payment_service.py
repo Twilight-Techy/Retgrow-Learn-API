@@ -2,6 +2,7 @@
 Payment service handling subscription and transaction logic.
 """
 import uuid
+import logging
 from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Optional, Dict, Any
@@ -24,6 +25,8 @@ from .providers.paystack import PaystackProvider
 from .providers.opay import OPayProvider
 from .providers.stripe_provider import StripeProvider
 from src.modules.subscriptions import subscription_service
+
+logger = logging.getLogger(__name__)
 
 
 # Provider registry
@@ -275,7 +278,7 @@ async def verify_and_activate_subscription(
                     context_data=context_data
                 )
         except Exception as e:
-            print(f"Failed to send subscription email: {e}")
+            logger.error("Failed to send subscription email: %s", e)
         
         return {
             "reference": reference,
