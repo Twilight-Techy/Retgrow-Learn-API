@@ -39,4 +39,4 @@ def get_otp_expiry(hours: int) -> datetime.datetime:
     Returns:
         datetime.datetime: The expiry datetime.
     """
-    return datetime.datetime.now() + datetime.timedelta(hours=hours)
+    return datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=hours)

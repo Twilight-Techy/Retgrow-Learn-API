@@ -12,7 +12,7 @@ from sqlalchemy.orm import declarative_base, relationship, backref, Mapped
 
 Base = declarative_base()
 
-class UserRole(enum.Enum):
+class UserRole(str, enum.Enum):
     STUDENT = "student"
     TUTOR = "tutor"
     ADMIN = "admin"
@@ -77,7 +77,7 @@ class Track(Base):
     def __repr__(self):
         return f"<Track(id={self.id}, title={self.title}, level={self.level})>"
 
-class CourseLevel(enum.Enum):
+class CourseLevel(str, enum.Enum):
     BEGINNER = "beginner"
     INTERMEDIATE = "intermediate"
     ADVANCED = "advanced"
@@ -272,7 +272,7 @@ class CourseQuiz(Base):
     def __repr__(self):
         return f"<CourseQuiz(course_id={self.course_id}, quiz_id={self.quiz_id}, order={self.order})>"
 
-class ResourceType(enum.Enum):
+class ResourceType(str, enum.Enum):
     ARTICLE = "article"
     VIDEO = "video"
     EBOOK = "ebook"
@@ -341,7 +341,7 @@ class UserAchievement(Base):
     def __repr__(self):
         return f"<UserAchievement(id={self.id}, user_id={self.user_id}, achievement_id={self.achievement_id}, earned_at={self.earned_at})>"
 
-class NotificationType(enum.Enum):
+class NotificationType(str, enum.Enum):
     INFO = "info"
     SUCCESS = "success"
     WARNING = "warning"
@@ -616,27 +616,27 @@ class Certificate(Base):
 
 # ==================== SUBSCRIPTION & PAYMENT MODELS ====================
 
-class SubscriptionPlan(enum.Enum):
+class SubscriptionPlan(str, enum.Enum):
     FREE = "free"
     FOCUSED = "focused"
     PRO = "pro"
 
-class BillingCycle(enum.Enum):
+class BillingCycle(str, enum.Enum):
     MONTHLY = "monthly"
     YEARLY = "yearly"
 
-class PaymentProvider(enum.Enum):
+class PaymentProvider(str, enum.Enum):
     PAYSTACK = "paystack"
     OPAY = "opay"
     STRIPE = "stripe"
 
-class PaymentStatus(enum.Enum):
+class PaymentStatus(str, enum.Enum):
     PENDING = "pending"
     SUCCESS = "success"
     FAILED = "failed"
     CANCELLED = "cancelled"
 
-class SubscriptionStatus(enum.Enum):
+class SubscriptionStatus(str, enum.Enum):
     ACTIVE = "active"
     EXPIRED = "expired"
     CANCELLED = "cancelled"
