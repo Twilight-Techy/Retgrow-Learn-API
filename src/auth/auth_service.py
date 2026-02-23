@@ -16,6 +16,8 @@ from src.models.models import User, UserLogin, AuthProvider
 
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
+from google_auth_oauthlib.flow import Flow
+
 
 # Initialize the password context (bcrypt)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -194,30 +196,81 @@ async def login_user(email: str, password: str, db: AsyncSession):
     refresh_token = create_refresh_token(data={"sub": str(user.id)})
     return user, access_token, refresh_token
 
-async def authenticate_google_user(token: str, db: AsyncSession):
+def get_google_flow() -> Flow:
+    """Creates and returns a Google OAuth2 Flow instance."""
+    client_config = {
+        "web": {
+            "client_id": settings.GOOGLE_CLIENT_ID,
+            "project_id": "retgrow-learn",
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+            "client_secret": settings.GOOGLE_CLIENT_SECRET,
+            "redirect_uris": [settings.GOOGLE_REDIRECT_URI]
+        }
+    }
+    
+    flow = Flow.from_client_config(
+        client_config,
+        scopes=[
+            "https://www.googleapis.com/auth/userinfo.email",
+            "https://www.googleapis.com/auth/userinfo.profile",
+            "openid"
+        ]
+    )
+    flow.redirect_uri = settings.GOOGLE_REDIRECT_URI
+    return flow
+
+async def generate_google_auth_url() -> str:
+    """Generates the Google authorization URL."""
+    flow = get_google_flow()
+    auth_url, _ = flow.authorization_url(prompt='consent')
+    return auth_url
+
+async def handle_google_callback(code: str, db: AsyncSession):
     """
-    Verify the Google identity token, find or create the user, 
-    and return the user object along with JWT access and refresh tokens.
+    Exchanges the authorization code for tokens, extracts user info,
+    and forwards it to the authentication handler.
     """
-    try:
-        # Verify the token with Google
-        id_info = id_token.verify_oauth2_token(
-            token, google_requests.Request(), settings.GOOGLE_CLIENT_ID
+    flow = get_google_flow()
+    flow.fetch_token(code=code)
+    
+    credentials = flow.credentials
+    if not credentials.id_token:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No ID token found in Google response"
         )
-
-        email = id_info.get("email")
-        first_name = id_info.get("given_name", "")
-        last_name = id_info.get("family_name", "")
-        avatar_url = id_info.get("picture", None)
-        username = email.split('@')[0] # Fallback username
-
-        if not email:
-            raise ValueError("Email not found in Google Token")
-
+        
+    try:
+        # Verify the ID token and get user info
+        user_info = id_token.verify_oauth2_token(
+            credentials.id_token, google_requests.Request(), settings.GOOGLE_CLIENT_ID
+        )
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid Google Token: {str(e)}"
+            detail=f"Invalid Google ID Token: {str(e)}"
+        )
+        
+    return await authenticate_google_user(user_info, db)
+
+
+async def authenticate_google_user(user_info: dict, db: AsyncSession):
+    """
+    Process the Google user info, find or create the user, 
+    and return the user object along with JWT access and refresh tokens.
+    """
+    email = user_info.get("email")
+    first_name = user_info.get("given_name", "")
+    last_name = user_info.get("family_name", "")
+    avatar_url = user_info.get("picture", None)
+    username = email.split('@')[0] if email else "" # Fallback username
+
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email not found in Google Token"
         )
 
     # Check if a user with this email already exists

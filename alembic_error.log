@@ -1,0 +1,140 @@
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade 18e383d50133 -> eb049b24a583, Add auth_provider to User
+Traceback (most recent call last):
+  File "C:\Users\mzone\Desktop\MyProjects\Retgrow Initiative\Retgrow-Learn-API\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\mzone\Desktop\MyProjects\Retgrow Initiative\Retgrow-Learn-API\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 942, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.errors.UndefinedObject: type "authprovider" does not exist
+LINE 1: ALTER TABLE users ADD COLUMN auth_provider authprovider NOT ...
+                                                   ^
+System.Management.Automation.RemoteException
+System.Management.Automation.RemoteException
+The above exception was the direct cause of the following exception:
+System.Management.Automation.RemoteException
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\mzone\Desktop\MyProjects\Retgrow Initiative\Retgrow-Learn-API\venv\Scripts\alembic.exe\__main__.py", line 7, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "C:\Users\mzone\Desktop\MyProjects\Retgrow Initiative\Retgrow-Learn-API\venv\Lib\site-packages\alembic\config.py", line 636, in main
+    CommandLine(prog=prog).main(argv=argv)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\Users\mzone\Desktop\MyProjects\Retgrow Initiative\Retgrow-Learn-API\venv\Lib\site-packages\alembic\config.py", line 626, in main
+    self.run_cmd(cfg, options)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "C:\Users\mzone\Desktop\MyProjects\Retgrow Initiative\Retgrow-Learn-API\venv\Lib\site-packages\alembic\config.py", line 603, in run_cmd
+    fn(
+    ~~^
+        config,
+        ^^^^^^^
+        *[getattr(options, k, None) for k in positional],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        **{k: getattr(options, k, None) for k in kwarg},
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\mzone\Desktop\MyProjects\Retgrow Initiative\Retgrow-Learn-API\venv\Lib\site-packages\alembic\command.py", line 406, in upgrade
+    script.run_env()
+    ~~~~~~~~~~~~~~^^
+  File "C:\Users\mzone\Desktop\MyProjects\Retgrow Initiative\Retgrow-Learn-API\venv\Lib\site-packages\alembic\script\base.py", line 586, in run_env
+    util.load_python_file(self.dir, "env.py")
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mzone\Desktop\MyProjects\Retgrow Initiative\Retgrow-Learn-API\venv\Lib\site-packages\alembic\util\pyfiles.py", line 95, in load_python_file
+    module = load_module_py(module_id, path)
+  File "C:\Users\mzone\Desktop\MyProjects\Retgrow Initiative\Retgrow-Learn-API\venv\Lib\site-packages\alembic\util\pyfiles.py", line 113, in load_module_py
+    spec.loader.exec_module(module)  # type: ignore
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "C:\Users\mzone\Desktop\MyProjects\Retgrow Initiative\Retgrow-Learn-API\alembic\env.py", line 84, in <module>
+    run_migrations_online()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\mzone\Desktop\MyProjects\Retgrow Initiative\Retgrow-Learn-API\alembic\env.py", line 78, in run_migrations_online
+    context.run_migrations()
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "<string>", line 8, in run_migrations
+  File "C:\Users\mzone\Desktop\MyProjects\Retgrow Initiative\Retgrow-Learn-API\venv\Lib\site-packages\alembic\runtime\environment.py", line 946, in run_migrations
+    self.get_context().run_migrations(**kw)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\mzone\Desktop\MyProjects\Retgrow Initiative\Retgrow-Learn-API\venv\Lib\site-packages\alembic\runtime\migration.py", line 623, in run_migrations
+    step.migration_fn(**kw)
+    ~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\mzone\Desktop\MyProjects\Retgrow Initiative\Retgrow-Learn-API\alembic\versions\eb049b24a583_add_auth_provider_to_user.py", line 23, in upgrade
+    op.add_column('users', sa.Column('auth_provider', sa.Enum('EMAIL', 'GOOGLE', name='authprovider'), nullable=False))
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 8, in add_column
+  File "<string>", line 3, in add_column
+  File "C:\Users\mzone\Desktop\MyProjects\Retgrow Initiative\Retgrow-Learn-API\venv\Lib\site-packages\alembic\operations\ops.py", line 2156, in add_column
+    return operations.invoke(op)
+           ~~~~~~~~~~~~~~~~~^^^^
+  File "C:\Users\mzone\Desktop\MyProjects\Retgrow Initiative\Retgrow-Learn-API\venv\Lib\site-packages\alembic\operations\base.py", line 442, in invoke
+    return fn(self, operation)
+  File "C:\Users\mzone\Desktop\MyProjects\Retgrow Initiative\Retgrow-Learn-API\venv\Lib\site-packages\alembic\operations\toimpl.py", line 183, in add_column
+    operations.impl.add_column(table_name, column, schema=schema, **kw)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mzone\Desktop\MyProjects\Retgrow Initiative\Retgrow-Learn-API\venv\Lib\site-packages\alembic\ddl\impl.py", line 374, in add_column
+    self._exec(base.AddColumn(table_name, column, schema=schema))
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mzone\Desktop\MyProjects\Retgrow Initiative\Retgrow-Learn-API\venv\Lib\site-packages\alembic\ddl\impl.py", line 247, in _exec
+    return conn.execute(construct, params)
+           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mzone\Desktop\MyProjects\Retgrow Initiative\Retgrow-Learn-API\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1416, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "C:\Users\mzone\Desktop\MyProjects\Retgrow Initiative\Retgrow-Learn-API\venv\Lib\site-packages\sqlalchemy\sql\ddl.py", line 180, in _execute_on_connection
+    return connection._execute_ddl(
+           ~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\mzone\Desktop\MyProjects\Retgrow Initiative\Retgrow-Learn-API\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1527, in _execute_ddl
+    ret = self._execute_context(
+        dialect,
+    ...<4 lines>...
+        compiled,
+    )
+  File "C:\Users\mzone\Desktop\MyProjects\Retgrow Initiative\Retgrow-Learn-API\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1843, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\mzone\Desktop\MyProjects\Retgrow Initiative\Retgrow-Learn-API\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1983, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\mzone\Desktop\MyProjects\Retgrow Initiative\Retgrow-Learn-API\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2352, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\mzone\Desktop\MyProjects\Retgrow Initiative\Retgrow-Learn-API\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\mzone\Desktop\MyProjects\Retgrow Initiative\Retgrow-Learn-API\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 942, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.ProgrammingError: (psycopg2.errors.UndefinedObject) type "authprovider" does not exist
+LINE 1: ALTER TABLE users ADD COLUMN auth_provider authprovider NOT ...
+                                                   ^
+System.Management.Automation.RemoteException
+[SQL: ALTER TABLE users ADD COLUMN auth_provider authprovider NOT NULL]
+(Background on this error at: https://sqlalche.me/e/20/f405)

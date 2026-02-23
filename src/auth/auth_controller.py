@@ -1,6 +1,7 @@
 # src/auth/auth_controller.py
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
+from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.schemas import SignupRequest, ResendVerificationRequest
@@ -41,24 +42,35 @@ async def login(
 
     return schemas.TokenResponse(access_token=access_token, refresh_token=refresh_token)
 
-@router.post("/google", response_model=schemas.TokenResponse)
-async def google_auth(
-    request: Request,
-    auth_data: schemas.GoogleAuthRequest,
+@router.get("/google/login")
+async def google_auth_login():
+    """
+    Redirect the user to the Google OAuth2 consent screen.
+    """
+    auth_url = await auth_service.generate_google_auth_url()
+    return RedirectResponse(url=auth_url)
+
+@router.get("/google/callback")
+async def google_auth_callback(
+    code: str,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db_session)
 ):
     """
-    Authenticate a user via Google OAuth Identity Token.
-    Returns access and refresh tokens.
+    Handle the callback from Google OAuth2.
+    Exchanges the code for tokens, authenticates the user, 
+    and redirects to the frontend with tokens as query params.
     """
-    user, access_token, refresh_token = await auth_service.authenticate_google_user(auth_data.token, db)
+    user, access_token, refresh_token = await auth_service.handle_google_callback(code, db)
     
     # Check consistent login achievement
     if await check_consecutive_logins(user, db):
         background_tasks.add_task(award_achievement, str(user.id), "Consistent")
 
-    return schemas.TokenResponse(access_token=access_token, refresh_token=refresh_token)
+    from src.common.config import settings
+    frontend_callback_url = f"{settings.FRONTEND_URL}/api/auth/callback"
+    redirect_url = f"{frontend_callback_url}?access_token={access_token}&refresh_token={refresh_token}"
+    return RedirectResponse(url=redirect_url)
 
 @router.get("/me", response_model=schemas.AuthMeResponse)
 async def get_me(current_user: User = Depends(get_current_user)):
