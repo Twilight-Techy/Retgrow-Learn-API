@@ -17,6 +17,10 @@ class UserRole(str, enum.Enum):
     TUTOR = "tutor"
     ADMIN = "admin"
 
+class AuthProvider(str, enum.Enum):
+    EMAIL = "email"
+    GOOGLE = "google"
+
 class User(Base):
     __tablename__ = "users"
 
@@ -25,7 +29,8 @@ class User(Base):
     email = Column(String(255), unique=True, nullable=False, index=True)
     verification_code = Column(String(255), nullable=True)
     is_verified = Column(Boolean, default=False, nullable=False)
-    password_hash = Column(String(255), nullable=False)
+    password_hash = Column(String(255), nullable=True)  # Nullable for Google users
+    auth_provider = Column(SAEnum(AuthProvider), nullable=False, default=AuthProvider.EMAIL)
     first_name = Column(String(50), nullable=False)
     last_name = Column(String(50), nullable=False)
     bio = Column(Text, nullable=True)

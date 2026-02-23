@@ -16,6 +16,9 @@ class TokenResponse(BaseModel):
     refresh_token: str
     # token_type: str = "bearer"
 
+class GoogleAuthRequest(BaseModel):
+    token: str
+
 class SignupRequest(BaseModel):
     username: str
     email: EmailStr

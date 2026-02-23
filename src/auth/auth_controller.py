@@ -41,6 +41,25 @@ async def login(
 
     return schemas.TokenResponse(access_token=access_token, refresh_token=refresh_token)
 
+@router.post("/google", response_model=schemas.TokenResponse)
+async def google_auth(
+    request: Request,
+    auth_data: schemas.GoogleAuthRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db_session)
+):
+    """
+    Authenticate a user via Google OAuth Identity Token.
+    Returns access and refresh tokens.
+    """
+    user, access_token, refresh_token = await auth_service.authenticate_google_user(auth_data.token, db)
+    
+    # Check consistent login achievement
+    if await check_consecutive_logins(user, db):
+        background_tasks.add_task(award_achievement, str(user.id), "Consistent")
+
+    return schemas.TokenResponse(access_token=access_token, refresh_token=refresh_token)
+
 @router.get("/me", response_model=schemas.AuthMeResponse)
 async def get_me(current_user: User = Depends(get_current_user)):
     """

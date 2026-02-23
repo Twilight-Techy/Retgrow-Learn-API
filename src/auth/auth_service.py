@@ -9,10 +9,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from passlib.context import CryptContext
 from jwt.exceptions import DecodeError
 
-from src.common.config import settings, settings
+from src.common.config import settings
 from src.common.utils.email_service import send_email, send_verification_email
 from src.common.utils.otp import generate_verification_code
-from src.models.models import User, UserLogin
+from src.models.models import User, UserLogin, AuthProvider
+
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
 
 # Initialize the password context (bcrypt)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -189,6 +192,67 @@ async def login_user(email: str, password: str, db: AsyncSession):
     access_token_expires = timedelta(minutes=settings.JWT_EXPIRATION_MINUTES)
     access_token = create_access_token(data={"sub": str(user.id)}, expires_delta=access_token_expires)
     refresh_token = create_refresh_token(data={"sub": str(user.id)})
+    return user, access_token, refresh_token
+
+async def authenticate_google_user(token: str, db: AsyncSession):
+    """
+    Verify the Google identity token, find or create the user, 
+    and return the user object along with JWT access and refresh tokens.
+    """
+    try:
+        # Verify the token with Google
+        id_info = id_token.verify_oauth2_token(
+            token, google_requests.Request(), settings.GOOGLE_CLIENT_ID
+        )
+
+        email = id_info.get("email")
+        first_name = id_info.get("given_name", "")
+        last_name = id_info.get("family_name", "")
+        avatar_url = id_info.get("picture", None)
+        username = email.split('@')[0] # Fallback username
+
+        if not email:
+            raise ValueError("Email not found in Google Token")
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid Google Token: {str(e)}"
+        )
+
+    # Check if a user with this email already exists
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalars().first()
+
+    if user:
+        # If user exists but was created via regular sign-up, we still let them log in, 
+        # optionally we could link the accounts or update auth_provider.
+        if user.auth_provider != AuthProvider.GOOGLE:
+            user.auth_provider = AuthProvider.GOOGLE
+            await db.commit()
+            await db.refresh(user)
+    else:
+        # User doesn't exist, create a new one instantly verified with Google
+        user = User(
+            username=f"{username}_{int(datetime.now().timestamp())}",  # Ensure unique username
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            avatar_url=avatar_url,
+            is_verified=True,  # Google emails are already verified
+            password_hash=None, # No password
+            auth_provider=AuthProvider.GOOGLE
+        )
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+
+    await record_login_event(user.id, db)
+    
+    access_token_expires = timedelta(minutes=settings.JWT_EXPIRATION_MINUTES)
+    access_token = create_access_token(data={"sub": str(user.id)}, expires_delta=access_token_expires)
+    refresh_token = create_refresh_token(data={"sub": str(user.id)})
+    
     return user, access_token, refresh_token
 
 async def refresh_access_token(refresh_token_str: str, db: AsyncSession):

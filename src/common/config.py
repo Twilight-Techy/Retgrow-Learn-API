@@ -48,6 +48,10 @@ class Settings(BaseSettings):
     STRIPE_SECRET_KEY: str = ""       # Optional — not yet configured
     STRIPE_WEBHOOK_SECRET: str = ""   # Optional — not yet configured
     CRON_SECRET: str = "secret"
+    
+    # Google Auth Settings
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
 
     # Uncomment if you want to support comma-separated ALLOWED_ORIGINS strings
     @field_validator("ALLOWED_ORIGINS", mode="before")
