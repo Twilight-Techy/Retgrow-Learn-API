@@ -1,6 +1,6 @@
 from uuid import UUID
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.notifications import notification_service, schemas
@@ -10,16 +10,24 @@ from src.models.models import User
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
-@router.get("", response_model=List[schemas.NotificationResponse])
+@router.get("", response_model=schemas.NotificationListResponse)
 async def get_user_notifications(
+    limit: int = Query(10, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
     """
     Retrieve notifications visible to the current user.
     """
-    notifications = await notification_service.get_notifications(str(current_user.id), db)
-    return notifications
+    items, total, has_more = await notification_service.get_notifications(
+        str(current_user.id), db, limit=limit, offset=offset
+    )
+    return schemas.NotificationListResponse(
+        items=items,
+        total=total,
+        has_more=has_more
+    )
 
 @router.put("/{notificationId}/read", response_model=schemas.NotificationUpdateResponse)
 async def mark_notification_read(

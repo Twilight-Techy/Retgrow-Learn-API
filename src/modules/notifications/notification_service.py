@@ -20,7 +20,7 @@ async def _ensure_user_meta(user_id: str, db: AsyncSession) -> UserNotification:
         await db.refresh(meta)
     return meta
 
-async def get_notifications(user_id: str, db: AsyncSession) -> List[dict]:
+async def get_notifications(user_id: str, db: AsyncSession, limit: int = 10, offset: int = 0) -> Tuple[List[dict], int, bool]:
     """
     Returns a list of notifications visible to the user. Each item includes `is_unread` boolean.
     Also persists any newly-loaded notification ids into user_notification.unread_notifications (if not already present).
@@ -111,7 +111,11 @@ async def get_notifications(user_id: str, db: AsyncSession) -> List[dict]:
         await db.commit()
         await db.refresh(meta)
 
-    return to_return
+    total = len(to_return)
+    sliced_items = to_return[offset : offset + limit]
+    has_more = (offset + limit) < total
+
+    return sliced_items, total, has_more
 
 async def mark_notification_as_read(notification_id: str, user_id: str, db: AsyncSession) -> bool:
     """

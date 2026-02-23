@@ -22,3 +22,8 @@ class NotificationResponse(BaseModel):
 
 class NotificationUpdateResponse(BaseModel):
     message: str
+
+class NotificationListResponse(BaseModel):
+    items: list[NotificationResponse]
+    total: int
+    has_more: bool
