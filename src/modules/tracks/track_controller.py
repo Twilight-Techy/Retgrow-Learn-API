@@ -9,6 +9,8 @@ from src.common.utils.global_functions import ensure_instructor_or_admin
 from src.models.models import User
 from src.modules.tracks import track_service, schemas
 from src.common.database.database import get_db_session
+from fastapi import BackgroundTasks
+from src.events.dispatcher import dispatcher
 
 router = APIRouter(prefix="/tracks", tags=["tracks"])
 
@@ -61,6 +63,7 @@ async def get_track(slug: str, db: AsyncSession = Depends(get_db_session)):
 @router.post("", response_model=schemas.TrackResponse)
 async def create_track(
     track_request: schemas.TrackCreateRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
@@ -72,12 +75,14 @@ async def create_track(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to create track."
         )
+    background_tasks.add_task(dispatcher.dispatch, "track_event", track_title=new_track.title, action="added")
     return new_track
 
 @router.put("/{slug}", response_model=schemas.TrackResponse)
 async def update_track(
     slug: str,
     track_request: schemas.TrackUpdateRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
@@ -89,21 +94,32 @@ async def update_track(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Track not found."
         )
+    background_tasks.add_task(dispatcher.dispatch, "track_event", track_title=updated_track.title, action="updated")
     return updated_track
 
 @router.delete("/{slug}", response_model=dict)
 async def delete_track(
     slug: str,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
     ensure_instructor_or_admin(current_user)
+    
+    # We need the track title before deleting in order to send the notification
+    track_to_delete = await track_service.get_track_by_slug(slug, db)
+    if not track_to_delete:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Track not found."
+        )
     success = await track_service.delete_track(slug, db)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Track not found."
         )
+    background_tasks.add_task(dispatcher.dispatch, "track_event", track_title=track_to_delete.title, action="deleted")
     return {"message": "Track deleted successfully."}
 
 @router.get("/{slug}/curriculum", response_model=List[schemas.CurriculumCourseResponse])

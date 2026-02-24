@@ -9,9 +9,15 @@ from src.common.utils.global_functions import ensure_instructor_or_admin
 from src.modules.courses import course_service, schemas
 from src.modules.certificates import certificate_service
 from src.common.database.database import get_db_session
-from src.auth.dependencies import get_current_user  # Assumes implementation exists
-from src.models.models import User
+from fastapi import BackgroundTasks
 from src.events.dispatcher import dispatcher
+from src.auth.dependencies import get_current_user  # Assumes implementation exists
+from src.common.database.database import get_db_session
+from fastapi import BackgroundTasks
+from src.events.dispatcher import dispatcher
+from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
+from src.models.models import User, Course, TrackCourse
 
 router = APIRouter(prefix="/courses", tags=["courses"])
 
@@ -47,9 +53,23 @@ async def get_course(course_id: UUID, db: AsyncSession = Depends(get_db_session)
         )
     return course
 
+async def dispatch_course_event_for_all_tracks(course_id: UUID, title: str, action: str, db: AsyncSession):
+    # Fetch all track associations for this course
+    stmt = select(TrackCourse).where(TrackCourse.course_id == course_id)
+    result = await db.execute(stmt)
+    track_courses = result.scalars().all()
+
+    if not track_courses:
+        # If no tracks yet, dispatch one unscoped notification 
+        await dispatcher.dispatch("course_event", course_title=title, track_id=None, action=action)
+    else:
+        for tc in track_courses:
+            await dispatcher.dispatch("course_event", course_title=title, track_id=str(tc.track_id), action=action)
+
 @router.post("", response_model=schemas.CourseResponse, status_code=status.HTTP_201_CREATED)
 async def create_course(   
     course_data: schemas.CourseCreateRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
@@ -60,12 +80,14 @@ async def create_course(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to create course."
         )
+    background_tasks.add_task(dispatch_course_event_for_all_tracks, course.id, course.title, "added", db)
     return course
 
 @router.put("/{course_id}", response_model=schemas.CourseResponse)
 async def update_course(
     course_id: UUID,
     course_data: schemas.CourseUpdateRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
@@ -76,11 +98,13 @@ async def update_course(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Course not found."
         )
+    background_tasks.add_task(dispatch_course_event_for_all_tracks, updated_course.id, updated_course.title, "updated", db)
     return updated_course
 
 @router.post("/with_content", response_model=schemas.CourseDetailResponse, status_code=status.HTTP_201_CREATED)
 async def create_course_with_content(
     course_data: schemas.CourseCreateWithContentRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
@@ -91,12 +115,14 @@ async def create_course_with_content(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to create course with content."
         )
+    background_tasks.add_task(dispatch_course_event_for_all_tracks, course.id, course.title, "added", db)
     return schemas.CourseDetailResponse.model_validate(course)
 
 @router.put("/{course_id}/with_content", response_model=schemas.CourseDetailResponse)
 async def update_course_with_content(
     course_id: UUID,
     course_data: schemas.CourseUpdateWithContentRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
@@ -107,17 +133,26 @@ async def update_course_with_content(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Course not found."
         )
+    background_tasks.add_task(dispatch_course_event_for_all_tracks, updated_course.id, updated_course.title, "updated", db)
     return schemas.CourseDetailResponse.model_validate(updated_course)
 
 @router.delete("/{course_id}", response_model=dict)
 async def delete_course(
     course_id: UUID,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
     ensure_instructor_or_admin(current_user)
+    
+    # Needs course title to dispatch event
+    course_to_delete = await course_service.get_course_by_id(course_id, db)
+    if not course_to_delete:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+
     try:
         await course_service.delete_course(course_id, db)
+        background_tasks.add_task(dispatch_course_event_for_all_tracks, course_id, course_to_delete.title, "deleted", db)
         return {"message": "Course deleted successfully"}
     except ValueError as ve:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(ve))

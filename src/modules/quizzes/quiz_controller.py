@@ -110,6 +110,7 @@ async def submit_quiz(
 @router.post("", response_model=schemas.QuizResponse)
 async def create_quiz(
     quiz_request: schemas.QuizCreateRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
@@ -121,12 +122,14 @@ async def create_quiz(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to create quiz."
         )
+    background_tasks.add_task(dispatcher.dispatch, "course_content_event", item_type="Quiz", item_title=new_quiz.title, course_id=str(new_quiz.course_id), action="added")
     return new_quiz
 
 @router.put("/{quiz_id}", response_model=schemas.QuizResponse)
 async def update_quiz(
     quiz_id: UUID,
     quiz_request: schemas.QuizUpdateRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
@@ -138,19 +141,28 @@ async def update_quiz(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Quiz not found."
         )
+    background_tasks.add_task(dispatcher.dispatch, "course_content_event", item_type="Quiz", item_title=updated_quiz.title, course_id=str(updated_quiz.course_id), action="updated")
     return updated_quiz
 
 @router.delete("/{quiz_id}", response_model=dict)
 async def delete_quiz(
     quiz_id: UUID,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
     ensure_instructor_or_admin(current_user)
+    
+    # Must get the quiz before deleting to have access to properties
+    quiz_to_delete = await quiz_service.get_quiz_by_id(quiz_id, db)
+    if not quiz_to_delete:
+         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found.")
+         
     success = await quiz_service.delete_quiz(quiz_id, db)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Quiz not found."
         )
+    background_tasks.add_task(dispatcher.dispatch, "course_content_event", item_type="Quiz", item_title=quiz_to_delete.title, course_id=str(quiz_to_delete.course_id), action="deleted")
     return {"message": "Quiz deleted successfully."}

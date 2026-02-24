@@ -10,6 +10,8 @@ from src.common.utils.global_functions import ensure_instructor_or_admin
 from src.models.models import User
 from src.modules.resources import resource_service, schemas
 from src.common.database.database import get_db_session
+from fastapi import BackgroundTasks
+from src.events.dispatcher import dispatcher
 
 router = APIRouter(prefix="/resources", tags=["resources"])
 
@@ -59,6 +61,7 @@ async def record_resource_view(
 @router.post("", response_model=schemas.ResourceResponse)
 async def create_resource(
     resource_request: schemas.ResourceCreateRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
@@ -71,12 +74,14 @@ async def create_resource(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to create resource."
         )
+    background_tasks.add_task(dispatcher.dispatch, "track_content_event", item_type="Resource", item_title=new_resource.title, track_id=str(new_resource.track_id), action="added")
     return new_resource
 
 @router.put("/{resource_id}", response_model=schemas.ResourceResponse)
 async def update_resource(
     resource_id: UUID,
     resource_request: schemas.ResourceUpdateRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
@@ -88,19 +93,27 @@ async def update_resource(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Resource not found."
         )
+    background_tasks.add_task(dispatcher.dispatch, "track_content_event", item_type="Resource", item_title=updated_resource.title, track_id=str(updated_resource.track_id), action="updated")
     return updated_resource
 
 @router.delete("/{resource_id}", response_model=dict)
 async def delete_resource(
     resource_id: UUID,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
     ensure_instructor_or_admin(current_user)
+    
+    resource_to_delete = await resource_service.get_resource_by_id(resource_id, db)
+    if not resource_to_delete:
+         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found.")
+         
     success = await resource_service.delete_resource(resource_id, db)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Resource not found."
         )
+    background_tasks.add_task(dispatcher.dispatch, "track_content_event", item_type="Resource", item_title=resource_to_delete.title, track_id=str(resource_to_delete.track_id), action="deleted")
     return {"message": "Resource deleted successfully."}

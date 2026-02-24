@@ -11,8 +11,9 @@ from src.common.utils.global_functions import award_xp, ensure_instructor_or_adm
 from src.events.dispatcher import dispatcher
 from src.modules.lessons import lesson_service, schemas
 from src.common.database.database import get_db_session
+from src.common.database.database import get_db_session
 from src.auth.dependencies import get_current_user
-from src.models.models import User, UserLesson
+from src.models.models import User, UserLesson, Module, Lesson
 
 router = APIRouter(prefix="/courses", tags=["lessons"])
 
@@ -96,10 +97,23 @@ async def get_lesson(
 
     return lesson
 
+async def dispatch_lesson_event(lesson: Lesson, action: str, db: AsyncSession, background_tasks: BackgroundTasks):
+    try:
+        # Need to find the associated course_id by traversing up to the Module
+        stmt = select(Module.course_id).where(Module.id == lesson.module_id)
+        result = await db.execute(stmt)
+        course_id = result.scalars().first()
+        if course_id:
+            background_tasks.add_task(dispatcher.dispatch, "course_content_event", item_type="Lesson", item_title=lesson.title, course_id=str(course_id), action=action)
+    except Exception as e:
+        import logging
+        logging.error(f"Failed to dispatch lesson event: {e}")
+
 @router.post("/module/{module_id}", response_model=schemas.LessonResponse)
 async def create_lesson(
     module_id: UUID,
     lesson_data: schemas.LessonCreateRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
@@ -114,12 +128,14 @@ async def create_lesson(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to create lesson"
         )
+    await dispatch_lesson_event(lesson, "added", db, background_tasks)
     return lesson
 
 @router.put("/{lesson_id}", response_model=schemas.LessonResponse)
 async def update_lesson(
     lesson_id: UUID,
     lesson_data: schemas.LessonUpdateRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
@@ -134,7 +150,38 @@ async def update_lesson(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Lesson not found"
         )
+    await dispatch_lesson_event(updated_lesson, "updated", db, background_tasks)
     return updated_lesson
+
+@router.delete("/{lesson_id}", response_model=dict)
+async def delete_lesson(
+    lesson_id: UUID,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session)
+):
+    """
+    Delete an existing lesson.
+    Only instructors and admins can delete lessons.
+    """
+    ensure_instructor_or_admin(current_user)
+    
+    # Needs lesson instance to dispatch event before deletion
+    stmt = select(Lesson).where(Lesson.id == lesson_id)
+    result = await db.execute(stmt)
+    lesson_to_delete = result.scalars().first()
+    
+    if not lesson_to_delete:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Lesson not found."
+        )
+
+    # Re-use your service delete function
+    await lesson_service.delete_lesson(str(lesson_id), db)  # Assuming lesson_service has this method
+    
+    await dispatch_lesson_event(lesson_to_delete, "deleted", db, background_tasks)
+    return {"message": "Lesson deleted successfully"}
 
 @router.get("/{course_id}/last-lesson", response_model=schemas.LastLessonResponse)
 async def get_last_lesson_for_user(
