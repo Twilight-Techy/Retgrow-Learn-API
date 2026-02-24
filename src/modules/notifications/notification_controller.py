@@ -1,14 +1,43 @@
 from uuid import UUID
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
+from fastapi.responses import StreamingResponse
+import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.notifications import notification_service, schemas
 from src.common.database.database import get_db_session
 from src.auth.dependencies import get_current_user
 from src.models.models import User
+from src.events.sse_manager import sse_manager
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
+
+@router.get("/stream")
+async def stream_notifications(request: Request, current_user: User = Depends(get_current_user)):
+    """
+    SSE stream of realtime notifications for the current user.
+    """
+    user_id = str(current_user.id)
+    queue = await sse_manager.connect(user_id)
+    
+    async def event_generator():
+        try:
+            while True:
+                if await request.is_disconnected():
+                    break
+                
+                try:
+                    # Wait for message, timeout occasionally to check disconnect status
+                    message = await asyncio.wait_for(queue.get(), timeout=15.0)
+                    yield message
+                except asyncio.TimeoutError:
+                    # Send an SSE comment to keep the connection alive (ping)
+                    yield ": ping\n\n"
+        finally:
+            sse_manager.disconnect(user_id, queue)
+            
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 @router.get("", response_model=schemas.NotificationListResponse)
 async def get_user_notifications(
