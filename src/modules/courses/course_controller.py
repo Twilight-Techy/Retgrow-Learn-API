@@ -2,7 +2,7 @@
 
 from typing import List, Optional
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.common.utils.global_functions import ensure_instructor_or_admin
@@ -11,6 +11,7 @@ from src.modules.certificates import certificate_service
 from src.common.database.database import get_db_session
 from src.auth.dependencies import get_current_user  # Assumes implementation exists
 from src.models.models import User
+from src.events.dispatcher import dispatcher
 
 router = APIRouter(prefix="/courses", tags=["courses"])
 
@@ -141,6 +142,7 @@ async def get_course_content(
 @router.post("/{course_id}/enroll", response_model=schemas.EnrollmentResponse)
 async def enroll_course(
     course_id: UUID,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
@@ -151,6 +153,9 @@ async def enroll_course(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="User is already enrolled in this course!"
             )
+        
+        background_tasks.add_task(dispatcher.dispatch, "course_enrolled", user_id=str(current_user.id), course_id=str(course_id))
+
         return schemas.EnrollmentResponse(message="Enrollment successful.")
     except PermissionError as e:
         raise HTTPException(
@@ -175,6 +180,7 @@ async def get_enrollment_status(
 @router.post("/{course_id}/complete", response_model=dict)
 async def complete_course(
     course_id: UUID,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
@@ -209,6 +215,7 @@ async def complete_course(
     # check_and_mark attempts generation if 100%.
     
     if cert:
+        background_tasks.add_task(dispatcher.dispatch, "course_completed", user_id=str(current_user.id), course_id=str(course_id), is_completion=True)
         return {"certificate_id": str(cert.id), "message": "Course completed and certificate generated."}
     
     # Check if a certificate exists anyway (e.g. generated previously)

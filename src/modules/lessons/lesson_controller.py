@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
 from src.common.utils.global_functions import award_xp, ensure_instructor_or_admin
-from src.modules.achievements.achievement_tasks import award_achievement
+from src.events.dispatcher import dispatcher
 from src.modules.lessons import lesson_service, schemas
 from src.common.database.database import get_db_session
 from src.auth.dependencies import get_current_user
@@ -55,44 +55,9 @@ async def complete_lesson(
     
     await award_xp(current_user, db)
     
-    # Query the number of completed lessons for the user
-    result = await db.execute(select(UserLesson).where(UserLesson.user_id == current_user.id))
-    completed_lessons = result.scalars().all()    
-    # If this is the first completed lesson, schedule awarding the "First Step" achievement.
-    if len(completed_lessons) == 1:
-        background_tasks.add_task(award_achievement, str(current_user.id), "First Step")
-
-    # Now, check if the user has completed all lessons in the course.
-    # Get all lessons for the course.
-    lessons = await lesson_service.get_lessons_by_course(str(course_id), current_user, db)
-    total_lessons = len(lessons)
-    # Extract the IDs of the lessons in this course.
-    lesson_ids = [lesson.id for lesson in lessons]    
-    # Query the number of lessons in this course that the user has completed.
-    result = await db.execute(
-        select(UserLesson).where(
-            UserLesson.user_id == current_user.id,
-            UserLesson.lesson_id.in_(lesson_ids)
-        )
-    )
-    completed_lessons_in_course = result.scalars().all()    
-    if total_lessons > 0 and len(completed_lessons_in_course) == total_lessons:
-        background_tasks.add_task(award_achievement, str(current_user.id), "Subject Master")
-
-    # Award "Quick Learner" if the user has completed 5 lessons in a single day.
-    # Define today's time range (UTC)
-    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-    today_end = today_start + timedelta(days=1)
-    result = await db.execute(
-        select(UserLesson).where(
-            UserLesson.user_id == current_user.id,
-            UserLesson.completed_at >= today_start,
-            UserLesson.completed_at < today_end
-        )
-    )
-    completed_lessons_today = result.scalars().all()
-    if len(completed_lessons_today) == 5:
-        background_tasks.add_task(award_achievement, str(current_user.id), "Quick Learner")
+    
+    # Broadcast event for module completion
+    background_tasks.add_task(dispatcher.dispatch, "module_completed", user_id=str(current_user.id), module_id=str(lesson_id))
 
     return schemas.CompleteLessonResponse(message="Lesson marked as completed.")
 

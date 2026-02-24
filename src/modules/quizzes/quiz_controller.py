@@ -1,7 +1,7 @@
 # src/quizzes/quiz_controller.py
 
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
@@ -10,6 +10,7 @@ from src.modules.quizzes import quiz_service, schemas
 from src.common.database.database import get_db_session
 from src.auth.dependencies import get_current_user  # Assumes this dependency is implemented
 from src.models.models import User
+from src.events.dispatcher import dispatcher
 
 router = APIRouter(prefix="/quizzes", tags=["quizzes"])
 
@@ -73,6 +74,7 @@ async def get_quiz(quiz_id: UUID, db: AsyncSession = Depends(get_db_session)):
 async def submit_quiz(
     quiz_id: UUID,
     submission: schemas.QuizSubmissionRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
@@ -95,6 +97,9 @@ async def submit_quiz(
         {"question_id": q.id, "correct_answer": q.correct_answer}
         for q in questions
     ]
+
+    # Dispatch event
+    background_tasks.add_task(dispatcher.dispatch, "quiz_submitted", user_id=str(current_user.id), quiz_id=str(quiz_id), score=score)
 
     return schemas.QuizSubmissionResponse(
         score=score,

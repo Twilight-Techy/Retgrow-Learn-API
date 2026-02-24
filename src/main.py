@@ -14,6 +14,11 @@ from src.common.database.database import connect_to_db, close_db_connection
 from src.common.config import settings
 from src.common.rate_limit import limiter
 from src.router.routers import include_routers
+
+# Initialize listeners
+import src.events.listeners.auth_listener
+import src.events.listeners.achievement_listener
+import src.events.listeners.notification_listener
 # from src.common.utils.email import test_email
 
 # Centralized logging configuration

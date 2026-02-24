@@ -1,0 +1,17 @@
+--- ACHIEVEMENTS ---
+- First Steps: Complete your first lesson
+- Course Champion: Complete an entire course
+- Quiz Master: Score 90% or higher on 5 quizzes
+- Dedicated Learner: Log in for 7 consecutive days
+- Knowledge Seeker: Enroll in 5 courses
+- Fast Learner: Complete 10 lessons in one day
+- Perfect Score: Get 100% on a quiz
+- Discussion Starter: Create your first discussion topic
+- Helper: Reply to 10 discussions
+- Milestone: Reach 1000 XP
+
+--- NOTIFICATION TYPES ---
+- INFO
+- SUCCESS
+- WARNING
+- ERROR

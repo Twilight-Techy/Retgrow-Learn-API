@@ -1,0 +1,60 @@
+﻿venv\Scripts\python.ex
+e : Traceback (most 
+recent call last):
+At line:1 char:1
++ venv\Scripts\python.
+exe 
+test_gamification.py 
+> test_out.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo    
+          : NotSpeci  
+  fied: (Traceback    
+ (most recent call    
+ last)::String) [    
+], RemoteExceptio    n
+    + FullyQualifiedE 
+   rrorId : NativeCo  
+  mmandError
+ 
+  File "C:\Users\mzone
+\Desktop\MyProjects\Re
+tgrow Initiative\Retgr
+ow-Learn-API\test_gami
+fication.py", line 
+11, in <module>
+    import src.main
+  File "C:\Users\mzone
+\Desktop\MyProjects\Re
+tgrow Initiative\Retgr
+ow-Learn-API\src\main.
+py", line 20, in 
+<module>
+    import src.events.
+listeners.achievement_
+listener
+  File "C:\Users\mzone
+\Desktop\MyProjects\Re
+tgrow Initiative\Retgr
+ow-Learn-API\src\event
+s\listeners\achievemen
+t_listener.py", line 
+6, in <module>
+    from 
+src.models.models 
+import 
+ModuleLessonUser, 
+UserCourse, 
+LearningPath
+ImportError: cannot 
+import name 
+'ModuleLessonUser' 
+from 
+'src.models.models' (C
+:\Users\mzone\Desktop\
+MyProjects\Retgrow Ini
+tiative\Retgrow-Learn-
+API\src\models\models.
+py)

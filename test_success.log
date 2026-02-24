@@ -1,0 +1,64 @@
+INFO:src.events.dispatcher:Subscribed handle_user_logged_in to 'user_logged_in'
+INFO:src.events.dispatcher:Subscribed check_module_achievements to 'module_completed'
+INFO:src.events.dispatcher:Subscribed check_course_achievements to 'course_completed'
+INFO:src.events.dispatcher:Subscribed check_course_achievements to 'course_enrolled'
+INFO:src.events.dispatcher:Subscribed check_track_achievements to 'track_completed'
+INFO:src.events.dispatcher:Subscribed notify_achievement_unlocked to 'achievement_unlocked'
+INFO:sqlalchemy.engine.Engine:select pg_catalog.version()
+INFO:sqlalchemy.engine.Engine:[raw sql] ()
+INFO:sqlalchemy.engine.Engine:select current_schema()
+INFO:sqlalchemy.engine.Engine:[raw sql] ()
+INFO:sqlalchemy.engine.Engine:show standard_conforming_strings
+INFO:sqlalchemy.engine.Engine:[raw sql] ()
+INFO:sqlalchemy.engine.Engine:BEGIN (implicit)
+INFO:sqlalchemy.engine.Engine:SELECT users.id, users.username, users.email, users.verification_code, users.is_verified, users.password_hash, users.auth_provider, users.first_name, users.last_name, users.bio, users.avatar_url, users.xp, users.role, users.created_at, users.updated_at 
+FROM users 
+ LIMIT $1::INTEGER
+INFO:sqlalchemy.engine.Engine:[generated in 0.00379s] (1,)
+INFO:__main__:Testing gamification events with user: alice@example.com
+INFO:sqlalchemy.engine.Engine:SELECT achievements.id, achievements.title, achievements.description, achievements.icon_url, achievements.created_at, achievements.updated_at 
+FROM achievements 
+WHERE achievements.title = $1::VARCHAR
+INFO:sqlalchemy.engine.Engine:[generated in 0.02904s] ('Track Master',)
+INFO:sqlalchemy.engine.Engine:DELETE FROM user_achievements WHERE user_achievements.user_id = $1::UUID AND user_achievements.achievement_id = $2::UUID
+INFO:sqlalchemy.engine.Engine:[generated in 0.00131s] ('d9ed78c8-d9af-443b-8627-0039a0ccb05a', UUID('96431028-d071-40a0-996e-5e6a1e78cef1'))
+INFO:sqlalchemy.engine.Engine:DELETE FROM notifications WHERE notifications.user_id = $1::UUID AND notifications.title = $2::VARCHAR
+INFO:sqlalchemy.engine.Engine:[generated in 0.02894s] ('d9ed78c8-d9af-443b-8627-0039a0ccb05a', 'Achievement Unlocked!')
+INFO:sqlalchemy.engine.Engine:COMMIT
+INFO:__main__:--- Dispatching track_completed event ---
+INFO:src.events.dispatcher:Dispatching event 'track_completed' to 1 listeners.
+INFO:sqlalchemy.engine.Engine:BEGIN (implicit)
+INFO:sqlalchemy.engine.Engine:SELECT achievements.id, achievements.title, achievements.description, achievements.icon_url, achievements.created_at, achievements.updated_at 
+FROM achievements 
+WHERE achievements.title = $1::VARCHAR
+INFO:sqlalchemy.engine.Engine:[cached since 2.833s ago] ('Track Master',)
+INFO:sqlalchemy.engine.Engine:SELECT user_achievements.id, user_achievements.user_id, user_achievements.achievement_id, user_achievements.earned_at 
+FROM user_achievements 
+WHERE user_achievements.user_id = $1::UUID AND user_achievements.achievement_id = $2::UUID
+INFO:sqlalchemy.engine.Engine:[generated in 0.00125s] ('d9ed78c8-d9af-443b-8627-0039a0ccb05a', UUID('96431028-d071-40a0-996e-5e6a1e78cef1'))
+INFO:sqlalchemy.engine.Engine:INSERT INTO user_achievements (id, user_id, achievement_id) VALUES ($1::UUID, $2::UUID, $3::UUID) RETURNING user_achievements.earned_at
+INFO:sqlalchemy.engine.Engine:[generated in 0.00111s] (UUID('56a84120-c5e6-4eae-8fb8-dd3d102b47da'), 'd9ed78c8-d9af-443b-8627-0039a0ccb05a', UUID('96431028-d071-40a0-996e-5e6a1e78cef1'))
+INFO:sqlalchemy.engine.Engine:COMMIT
+INFO:src.modules.achievements.achievement_tasks:Achievement 'Track Master' awarded to user d9ed78c8-d9af-443b-8627-0039a0ccb05a
+INFO:src.events.dispatcher:Dispatching event 'achievement_unlocked' to 1 listeners.
+INFO:src.events.listeners.notification_listener:Notification queued for unlocked achievement 'Track Master' for user d9ed78c8-d9af-443b-8627-0039a0ccb05a
+INFO:sqlalchemy.engine.Engine:BEGIN (implicit)
+INFO:sqlalchemy.engine.Engine:INSERT INTO notifications (id, type, course_id, track_id, user_id, title, message, created_by) VALUES ($1::UUID, $2::notificationtype, $3::UUID, $4::UUID, $5::UUID, $6::VARCHAR, $7::VARCHAR, $8::UUID) RETURNING notifications.created_at
+INFO:sqlalchemy.engine.Engine:[generated in 0.04663s] (UUID('47bb966e-133a-4b2d-88ae-1419f0f51a54'), 'SUCCESS', None, None, 'd9ed78c8-d9af-443b-8627-0039a0ccb05a', 'Achievement Unlocked!', "Congratulations! You've earned the 'Track Master' achievement.", None)
+INFO:sqlalchemy.engine.Engine:COMMIT
+INFO:sqlalchemy.engine.Engine:BEGIN (implicit)
+INFO:sqlalchemy.engine.Engine:SELECT achievements.id, achievements.title, achievements.description, achievements.icon_url, achievements.created_at, achievements.updated_at 
+FROM achievements 
+WHERE achievements.title = $1::VARCHAR
+INFO:sqlalchemy.engine.Engine:[cached since 10.26s ago] ('Track Master',)
+INFO:sqlalchemy.engine.Engine:SELECT user_achievements.id, user_achievements.user_id, user_achievements.achievement_id, user_achievements.earned_at 
+FROM user_achievements 
+WHERE user_achievements.user_id = $1::UUID AND user_achievements.achievement_id = $2::UUID
+INFO:sqlalchemy.engine.Engine:[cached since 7.391s ago] ('d9ed78c8-d9af-443b-8627-0039a0ccb05a', UUID('96431028-d071-40a0-996e-5e6a1e78cef1'))
+INFO:__main__:SUCCESS: User was successfully awarded 'Track Master' via the event system!
+INFO:sqlalchemy.engine.Engine:SELECT notifications.id, notifications.type, notifications.course_id, notifications.track_id, notifications.user_id, notifications.title, notifications.message, notifications.created_at, notifications.created_by 
+FROM notifications 
+WHERE notifications.user_id = $1::UUID AND notifications.title = $2::VARCHAR
+INFO:sqlalchemy.engine.Engine:[generated in 0.00259s] ('d9ed78c8-d9af-443b-8627-0039a0ccb05a', 'Achievement Unlocked!')
+INFO:__main__:SUCCESS: Notification trigger worked! Found 1 matching notifications for this user.
+INFO:sqlalchemy.engine.Engine:ROLLBACK

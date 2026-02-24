@@ -145,32 +145,44 @@ async def mark_notification_as_read(notification_id: str, user_id: str, db: Asyn
     return True
 
 async def create_notification(
-    user_id: str,
     title: str,
     message: str,
     db: AsyncSession,
+    user_id: Optional[str] = None,
+    course_id: Optional[str] = None,
+    track_id: Optional[str] = None,
+    created_by: Optional[str] = None,
     notif_type: NotificationType = NotificationType.INFO,
     commit: bool = True,
 ):
     """
-    Create a notification record for a user.
+    Create a notification record, optionally scoped to a user, course, or track.
 
     Args:
-        user_id: The user to notify.
         title: Short title for the notification.
         message: Full notification message.
         db: Database session.
+        user_id: Optional user to notify.
+        course_id: Optional course to notify enrolled users.
+        track_id: Optional track to notify enrolled users. 
+        created_by: Optional admin ID who created the notification.
         notif_type: NotificationType enum value (default: INFO).
         commit: If False, only adds to session without committing.
                 Caller is responsible for committing the transaction.
                 Useful for batch operations to avoid N sequential commits.
     """
+    provided_scopes = [s for s in (user_id, course_id, track_id) if s is not None]
+    if len(provided_scopes) > 1:
+        raise ValueError("Only one of user_id, course_id, or track_id may be set.")
+
     new_notification = Notification(
-        user_id=user_id,
         title=title,
         type=notif_type,
         message=message,
-        read=False,
+        user_id=user_id,
+        course_id=course_id,
+        track_id=track_id,
+        created_by=created_by,
     )
     db.add(new_notification)
     if commit:

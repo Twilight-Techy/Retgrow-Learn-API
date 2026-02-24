@@ -12,6 +12,7 @@ from jwt.exceptions import DecodeError
 from src.common.config import settings
 from src.common.utils.email_service import send_email, send_verification_email
 from src.common.utils.otp import generate_verification_code
+from src.events.dispatcher import dispatcher
 from src.models.models import User, UserLogin, AuthProvider
 
 from google.oauth2 import id_token
@@ -150,6 +151,8 @@ async def verify_user(verification_data: dict, db: AsyncSession, background_task
     await db.commit()
     await db.refresh(user)
 
+    background_tasks.add_task(dispatcher.dispatch, "user_logged_in", user_id=str(user.id))
+
     access_token_expires = timedelta(minutes=settings.JWT_EXPIRATION_MINUTES)
     access_token = create_access_token(data={"sub": str(user.id)}, expires_delta=access_token_expires)
     refresh_token = create_refresh_token(data={"sub": str(user.id)})
@@ -164,10 +167,7 @@ async def verify_user(verification_data: dict, db: AsyncSession, background_task
 
     return access_token, refresh_token
 
-async def record_login_event(user_id: str, db: AsyncSession):
-    login_event = UserLogin(user_id=user_id)
-    db.add(login_event)
-    await db.commit()
+
 
 async def authenticate_user(email: str, password: str, db: AsyncSession):
     """Attempt to retrieve the user by email and verify the password."""
@@ -185,12 +185,14 @@ async def authenticate_user(email: str, password: str, db: AsyncSession):
         )
     return user
 
-async def login_user(email: str, password: str, db: AsyncSession):
+async def login_user(email: str, password: str, db: AsyncSession, background_tasks: BackgroundTasks):
     """Authenticate a user and return JWT access + refresh tokens if successful."""
     user = await authenticate_user(email, password, db)
     if not user:
         return None
-    await record_login_event(user.id, db)
+        
+    background_tasks.add_task(dispatcher.dispatch, "user_logged_in", user_id=str(user.id))
+    
     access_token_expires = timedelta(minutes=settings.JWT_EXPIRATION_MINUTES)
     access_token = create_access_token(data={"sub": str(user.id)}, expires_delta=access_token_expires)
     refresh_token = create_refresh_token(data={"sub": str(user.id)})
@@ -227,7 +229,7 @@ async def generate_google_auth_url() -> str:
     auth_url, _ = flow.authorization_url(prompt='consent')
     return auth_url
 
-async def handle_google_callback(code: str, db: AsyncSession):
+async def handle_google_callback(code: str, db: AsyncSession, background_tasks: BackgroundTasks):
     """
     Exchanges the authorization code for tokens, extracts user info,
     and forwards it to the authentication handler.
@@ -253,10 +255,10 @@ async def handle_google_callback(code: str, db: AsyncSession):
             detail=f"Invalid Google ID Token: {str(e)}"
         )
         
-    return await authenticate_google_user(user_info, db)
+    return await authenticate_google_user(user_info, db, background_tasks)
 
 
-async def authenticate_google_user(user_info: dict, db: AsyncSession):
+async def authenticate_google_user(user_info: dict, db: AsyncSession, background_tasks: BackgroundTasks):
     """
     Process the Google user info, find or create the user, 
     and return the user object along with JWT access and refresh tokens.
@@ -300,7 +302,7 @@ async def authenticate_google_user(user_info: dict, db: AsyncSession):
         await db.commit()
         await db.refresh(user)
 
-    await record_login_event(user.id, db)
+    background_tasks.add_task(dispatcher.dispatch, "user_logged_in", user_id=str(user.id))
     
     access_token_expires = timedelta(minutes=settings.JWT_EXPIRATION_MINUTES)
     access_token = create_access_token(data={"sub": str(user.id)}, expires_delta=access_token_expires)

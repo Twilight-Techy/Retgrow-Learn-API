@@ -6,6 +6,7 @@ from src.common.database.database import async_session
 
 logger = logging.getLogger(__name__)
 from src.models.models import UserAchievement, Achievement
+from src.events.dispatcher import dispatcher
 
 async def _award_achievement(user_id: str, achievement_title: str, db: AsyncSession):
     # Find the achievement by title
@@ -31,6 +32,9 @@ async def _award_achievement(user_id: str, achievement_title: str, db: AsyncSess
     db.add(new_award)
     await db.commit()
     logger.info("Achievement '%s' awarded to user %s", achievement_title, user_id)
+    
+    # Broadcast event so that notifications are sent
+    await dispatcher.dispatch("achievement_unlocked", user_id=user_id, achievement_title=achievement_title)
 
 async def award_achievement(user_id: str, achievement_title: str):
     """

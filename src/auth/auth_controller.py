@@ -29,7 +29,7 @@ async def login(
     - **email**: The user's email address.
     - **password**: The user's password.
     """
-    user, access_token, refresh_token = await auth_service.login_user(credentials.email, credentials.password, db)
+    user, access_token, refresh_token = await auth_service.login_user(credentials.email, credentials.password, db, background_tasks)
     if not access_token or not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -61,7 +61,7 @@ async def google_auth_callback(
     Exchanges the code for tokens, authenticates the user, 
     and redirects to the frontend with tokens as query params.
     """
-    user, access_token, refresh_token = await auth_service.handle_google_callback(code, db)
+    user, access_token, refresh_token = await auth_service.handle_google_callback(code, db, background_tasks)
     
     # Check consistent login achievement
     if await check_consecutive_logins(user, db):

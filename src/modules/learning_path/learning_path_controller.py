@@ -1,6 +1,6 @@
 # src/learning_path/learning_path_controller.py
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
@@ -8,6 +8,7 @@ from src.modules.learning_path import learning_path_service, schemas
 from src.common.database.database import get_db_session
 from src.auth.dependencies import get_current_user
 from src.models.models import User
+from src.events.dispatcher import dispatcher
 
 router = APIRouter(prefix="/user", tags=["learning-path"])
 
@@ -35,6 +36,7 @@ async def get_user_skills(
 @router.post("/enroll", response_model=schemas.LearningPathResponse)
 async def enroll_in_track(
     enroll_request: schemas.LearningPathEnrollRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session)
 ):
@@ -53,4 +55,5 @@ async def enroll_in_track(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Enrollment failed."
         )
+    background_tasks.add_task(dispatcher.dispatch, "track_enrolled", user_id=str(current_user.id), track_id=str(enroll_request.track_id))
     return new_learning_path
