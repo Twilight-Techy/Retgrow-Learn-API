@@ -188,49 +188,53 @@ async def create_notification(
     db.add(new_notification)
     if commit:
         await db.commit()
-        await db.refresh(new_notification)
+    else:
+        await db.flush()  # Ensure ID is generated for the payload
+    
+    await db.refresh(new_notification)
+    
+    # Dispatch to active SSE clients based on scope
+    active_users = list(sse_manager.connections.keys())
+    if active_users:
+        payload = {
+            "id": str(new_notification.id),
+            "type": new_notification.type.name.lower() if hasattr(new_notification.type, 'name') else str(new_notification.type).lower(),
+            "title": new_notification.title,
+            "message": new_notification.message,
+            "created_at": new_notification.created_at.isoformat() if new_notification.created_at else None,
+            "is_unread": True
+        }
         
-        # Dispatch to active SSE clients based on scope
-        active_users = list(sse_manager.connections.keys())
-        if active_users:
-            payload = {
-                "id": str(new_notification.id),
-                "type": new_notification.type.name.lower() if hasattr(new_notification.type, 'name') else str(new_notification.type).lower(),
-                "title": new_notification.title,
-                "message": new_notification.message,
-                "created_at": new_notification.created_at.isoformat() if new_notification.created_at else None,
-                "is_unread": True
-            }
-            
-            if new_notification.user_id:
-                uid_str = str(new_notification.user_id)
-                if uid_str in active_users:
-                    await sse_manager.send_to_user(uid_str, payload)
-            elif new_notification.course_id:
-                # Determine which active users are enrolled in this course
-                from uuid import UUID
-                active_uuids = [UUID(u) for u in active_users]
-                stmt = select(UserCourse.user_id).where(
-                    UserCourse.course_id == new_notification.course_id,
-                    UserCourse.user_id.in_(active_uuids)
-                )
-                res = await db.execute(stmt)
-                for uid in res.scalars().all():
-                    await sse_manager.send_to_user(str(uid), payload)
-            elif new_notification.track_id:
-                # Determine which active users belong to this track
-                from uuid import UUID
-                active_uuids = [UUID(u) for u in active_users]
-                stmt = select(LearningPath.user_id).where(
-                    LearningPath.track_id == new_notification.track_id,
-                    LearningPath.completed_at.is_(None),
-                    LearningPath.user_id.in_(active_uuids)
-                )
-                res = await db.execute(stmt)
-                for uid in res.scalars().all():
-                    await sse_manager.send_to_user(str(uid), payload)
-            else:
-                # Global notification, broadcast to all active connections
-                for uid in active_users:
-                    await sse_manager.send_to_user(uid, payload)
+        if new_notification.user_id:
+            uid_str = str(new_notification.user_id)
+            if uid_str in active_users:
+                await sse_manager.send_to_user(uid_str, payload)
+        elif new_notification.course_id:
+            # Determine which active users are enrolled in this course
+            from uuid import UUID
+            active_uuids = [UUID(u) for u in active_users]
+            stmt = select(UserCourse.user_id).where(
+                UserCourse.course_id == new_notification.course_id,
+                UserCourse.user_id.in_(active_uuids)
+            )
+            res = await db.execute(stmt)
+            for uid in res.scalars().all():
+                await sse_manager.send_to_user(str(uid), payload)
+        elif new_notification.track_id:
+            # Determine which active users belong to this track
+            from uuid import UUID
+            active_uuids = [UUID(u) for u in active_users]
+            stmt = select(LearningPath.user_id).where(
+                LearningPath.track_id == new_notification.track_id,
+                LearningPath.completed_at.is_(None),
+                LearningPath.user_id.in_(active_uuids)
+            )
+            res = await db.execute(stmt)
+            for uid in res.scalars().all():
+                await sse_manager.send_to_user(str(uid), payload)
+        else:
+            # Global notification, broadcast to all active connections
+            for uid in active_users:
+                await sse_manager.send_to_user(uid, payload)
+    
     return new_notification

@@ -20,13 +20,13 @@ class SSEManager:
         # We use a Queue for each specific connection
         queue = asyncio.Queue()
         self.connections[user_id].add(queue)
-        logger.debug(f"Client connected for user_id: {user_id}. Active sessions for user: {len(self.connections[user_id])}")
+        logger.info(f"Client connected for user_id: {user_id}. Active sessions for user: {len(self.connections[user_id])}")
         return queue
 
     def disconnect(self, user_id: str, queue: asyncio.Queue):
         if user_id in self.connections and queue in self.connections[user_id]:
             self.connections[user_id].remove(queue)
-            logger.debug(f"Client disconnected for user_id: {user_id}. Active sessions for user: {len(self.connections[user_id])}")
+            logger.info(f"Client disconnected for user_id: {user_id}. Active sessions for user: {len(self.connections[user_id])}")
             if not self.connections[user_id]:
                 del self.connections[user_id]
 
@@ -51,7 +51,7 @@ class SSEManager:
         # Broadcast to all of this user's active connection queues
         for queue in queues:
             await queue.put(sse_message)
-        logger.debug(f"Sent notification via SSE to user_id: {user_id} across {len(queues)} connection(s)")
+        logger.info(f"Sent notification via SSE to user_id: {user_id} across {len(queues)} connection(s)")
 
 # Global instance
 sse_manager = SSEManager()

@@ -37,7 +37,12 @@ async def stream_notifications(request: Request, current_user: User = Depends(ge
         finally:
             sse_manager.disconnect(user_id, queue)
             
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    headers = {
+        "Cache-Control": "no-cache, no-transform",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no"
+    }        
+    return StreamingResponse(event_generator(), media_type="text/event-stream", headers=headers)
 
 @router.get("", response_model=schemas.NotificationListResponse)
 async def get_user_notifications(
