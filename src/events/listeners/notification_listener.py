@@ -12,8 +12,8 @@ async def notify_achievement_unlocked(user_id: str, achievement_title: str, db: 
     Creates a new Notification row to alert the user about their gamification award.
     """
     try:
-        title = "Achievement Unlocked!"
-        message = f"Congratulations! You've earned the '{achievement_title}' achievement."
+        title = "🎉 Achievement Unlocked!"
+        message = f"Amazing work! You've just earned the '{achievement_title}' achievement. Keep up the momentum! 🚀"
         
         await create_notification(
             user_id=user_id,
@@ -38,8 +38,14 @@ async def notify_track_event(track_title: str, action: str, db: AsyncSession, **
     action: "added", "updated", "deleted"
     """
     try:
-        title = f"Track {action.capitalize()}"
-        message = f"The track '{track_title}' has been {action}."
+        title = f"Track Updates: {action.capitalize()}"
+        
+        if action == "added":
+            message = f"🌟 New track alert! '{track_title}' is now available. Ready to dive in?"
+        elif action == "updated":
+            message = f"✨ '{track_title}' just got an update! Check out what's new."
+        else:
+            message = f"The track '{track_title}' has been removed."
         await create_notification(
             title=title,
             message=message,
@@ -58,7 +64,13 @@ async def notify_course_event(course_title: str, track_id: str, action: str, db:
     """
     try:
         title = f"Course {action.capitalize()}"
-        message = f"The course '{course_title}' has been {action}."
+        
+        if action == "added":
+            message = f"📚 Exciting news! A new course '{course_title}' has just been added to your track. Start learning today!"
+        elif action == "updated":
+            message = f"🔄 The course '{course_title}' has been updated with fresh content! Jump back in to see."
+        else:
+            message = f"The course '{course_title}' has been removed from your track."
         if track_id:
             await create_notification(
                 title=title,
@@ -79,8 +91,14 @@ async def notify_course_content_event(item_type: str, item_title: str, course_id
     action: "added", "updated", "deleted"
     """
     try:
-        title = f"{item_type} {action.capitalize()}"
-        message = f"The {item_type.lower()} '{item_title}' has been {action}."
+        title = f"New {item_type} Available!" if action == "added" else f"{item_type} {action.capitalize()}"
+        
+        if action == "added":
+            message = f"🎓 A new {item_type.lower()} '{item_title}' is ready for you! Let's get to work."
+        elif action == "updated":
+            message = f"✏️ Heads up! The {item_type.lower()} '{item_title}' was recently updated. Make sure you haven't missed anything."
+        else:
+            message = f"The {item_type.lower()} '{item_title}' has been removed from your course."
         if course_id:
             await create_notification(
                 title=title,
@@ -101,8 +119,13 @@ async def notify_track_content_event(item_type: str, item_title: str, track_id: 
     action: "added", "updated", "deleted"
     """
     try:
-        title = f"{item_type} {action.capitalize()}"
-        message = f"The {item_type.lower()} '{item_title}' has been {action}."
+        title = f"New {item_type}!" if action == "added" else f"{item_type} {action.capitalize()}"
+        if action == "added":
+            message = f"📎 We've added a helpful new {item_type.lower()} '{item_title}' to your track. Check it out!"
+        elif action == "updated":
+            message = f"📝 The {item_type.lower()} '{item_title}' has been revised. Take a look at the latest version."
+        else:
+            message = f"The {item_type.lower()} '{item_title}' is no longer available."
         if track_id:
             await create_notification(
                 title=title,
