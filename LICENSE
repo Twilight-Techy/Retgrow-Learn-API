@@ -1,0 +1,20 @@
+Copyright (c) 2024 Ibrahim. All Rights Reserved.
+
+1. PLATFORM OWNERSHIP
+This software, including all source code, database architecture, design, and infrastructure components (collectively the "Platform"), is the exclusive intellectual property of the Platform Owner (Ibrahim). This repository and its contents are proprietary and confidential.
+
+2. LICENSE RESTRICTIONS
+The Organization is granted a revocable, non-exclusive license to use the Platform for its operational purposes.
+Under this license, the Organization shall NOT:
+a) Claim ownership, title, or authorship of the Platform
+b) Distribute, sub-license, sell, or rent the Platform source code
+c) Transfer the Platform to external subsidiaries or third parties without explicit written consent from the Platform Owner
+d) Attempt to export, copy, or fork the repository for independent deployment
+
+The Platform Owner may, at any time, introduce fees, licensing charges, or other commercial terms for continued use of the Platform, or revoke this license entirely at their sole discretion.
+
+3. CONTRIBUTIONS
+Any code, fixes, documentation, or improvements ("Contributions") submitted to this repository by developers affiliated with the Organization are considered works made for the Platform. By submitting a Contribution, the contributor irreversibly assigns all rights, title, and interest in such Contributions to the Platform Owner.
+
+4. USER DATA
+The Platform operates as the data processor for end-users. Access to user data by the Organization is strictly limited to the interactions provided within the Platform's interface. The Organization is not entitled to direct database access or data exports. End-users retain ownership of their personal data in accordance with applicable privacy laws.
