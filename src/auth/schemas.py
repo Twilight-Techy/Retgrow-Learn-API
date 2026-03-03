@@ -114,6 +114,7 @@ class AuthMeResponse(BaseModel):
     last_name: str
     role: str
     is_active: bool = True
+    current_plan: Optional[str] = "free"
     
     class Config:
         from_attributes = True

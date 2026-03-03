@@ -55,7 +55,7 @@ async def get_user_progress(current_user: User, db: AsyncSession) -> dict:
 
     # Build the list of course progress details with the course title
     courses_progress = [
-        {"course_id": str(row.UserCourse.course_id), "progress": row.UserCourse.progress, "title": row.title}
+        {"id": str(row.UserCourse.course_id), "progress": row.UserCourse.progress, "title": row.title}
         for row in user_courses_with_titles
     ]
 

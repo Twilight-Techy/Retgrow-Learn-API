@@ -3,6 +3,7 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 
 from src.auth.schemas import SignupRequest, ResendVerificationRequest
 from src.auth.check_consecutive_logins import check_consecutive_logins
@@ -73,11 +74,18 @@ async def google_auth_callback(
     return RedirectResponse(url=redirect_url)
 
 @router.get("/me", response_model=schemas.AuthMeResponse)
-async def get_me(current_user: User = Depends(get_current_user)):
+async def get_me(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session)
+):
     """
-    Get current authenticated user info (minimal).
+    Get current authenticated user info (minimal) including current subscription plan.
     """
-    return current_user
+    plan = await auth_service.get_user_current_plan(current_user.id, db)
+    
+    response = schemas.AuthMeResponse.model_validate(current_user)
+    response.current_plan = plan
+    return response
 
 @router.post("/signup", response_model=schemas.SignupResponse)
 async def signup(

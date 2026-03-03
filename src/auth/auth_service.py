@@ -19,9 +19,21 @@ from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 from google_auth_oauthlib.flow import Flow
 
+from src.models.models import Subscription, SubscriptionStatus
 
 # Initialize the password context (bcrypt)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+async def get_user_current_plan(user_id: str, db: AsyncSession) -> str:
+    """Get the current active subscription plan for a user."""
+    result = await db.execute(
+        select(Subscription).where(
+            Subscription.user_id == user_id,
+            Subscription.status == SubscriptionStatus.ACTIVE
+        ).order_by(Subscription.created_at.desc()).limit(1)
+    )
+    subscription = result.scalars().first()
+    return subscription.plan.value if subscription else "free"
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify that the provided password matches the hashed password."""
