@@ -16,6 +16,7 @@ from src.models.models import (
     SubscriptionStatus,
 )
 from src.modules.payments.schemas import get_plan_amount
+from src.events.dispatcher import dispatcher
 
 
 def calculate_end_date(billing_cycle: BillingCycle) -> datetime:
@@ -211,5 +212,8 @@ async def create_new_subscription_record(
     db.add(new_subscription)
     await db.commit()
     await db.refresh(new_subscription)
+    
+    # Dispatch subscription_created event
+    dispatcher.dispatch("subscription_created", user_id=str(user_id), plan=plan.value)
     
     return new_subscription
