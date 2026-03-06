@@ -99,6 +99,7 @@ async def get_notifications(user_id: str, db: AsyncSession, limit: int = 10, off
             "course_id": n.course_id,
             "track_id": n.track_id,
             "user_id": n.user_id,
+            "action_url": n.action_url,
             "is_unread": is_unread,
         })
 
@@ -152,6 +153,7 @@ async def create_notification(
     user_id: Optional[str] = None,
     course_id: Optional[str] = None,
     track_id: Optional[str] = None,
+    action_url: Optional[str] = None,
     created_by: Optional[str] = None,
     notif_type: NotificationType = NotificationType.INFO,
     commit: bool = True,
@@ -183,6 +185,7 @@ async def create_notification(
         user_id=user_id,
         course_id=course_id,
         track_id=track_id,
+        action_url=action_url,
         created_by=created_by,
     )
     db.add(new_notification)
@@ -201,6 +204,7 @@ async def create_notification(
             "type": new_notification.type.name.lower() if hasattr(new_notification.type, 'name') else str(new_notification.type).lower(),
             "title": new_notification.title,
             "message": new_notification.message,
+            "action_url": new_notification.action_url,
             "created_at": new_notification.created_at.isoformat() if new_notification.created_at else None,
             "is_unread": True
         }

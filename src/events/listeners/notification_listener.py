@@ -20,6 +20,7 @@ async def notify_achievement_unlocked(user_id: str, achievement_title: str, db: 
             title=title,
             message=message,
             db=db,
+            action_url="/achievements",
             notif_type=NotificationType.SUCCESS,
             commit=False # The dispatcher will commit
         )
@@ -50,6 +51,7 @@ async def notify_track_event(track_title: str, action: str, db: AsyncSession, **
             title=title,
             message=message,
             db=db,
+            action_url="/tracks",
             notif_type=NotificationType.INFO,
             commit=False
         )
@@ -77,6 +79,7 @@ async def notify_course_event(course_title: str, track_id: str, action: str, db:
                 message=message,
                 db=db,
                 track_id=track_id,
+                action_url=f"/tracks/{track_id}" if action != "deleted" else "/tracks",
                 notif_type=NotificationType.INFO,
                 commit=False
             )
@@ -105,6 +108,7 @@ async def notify_course_content_event(item_type: str, item_title: str, course_id
                 message=message,
                 db=db,
                 course_id=course_id,
+                action_url=f"/courses/{course_id}" if action != "deleted" else "/courses",
                 notif_type=NotificationType.INFO,
                 commit=False
             )
@@ -132,6 +136,7 @@ async def notify_track_content_event(item_type: str, item_title: str, track_id: 
                 message=message,
                 db=db,
                 track_id=track_id,
+                action_url=f"/tracks/{track_id}" if action != "deleted" else "/tracks",
                 notif_type=NotificationType.INFO,
                 commit=False
             )

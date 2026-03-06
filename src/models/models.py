@@ -368,6 +368,7 @@ class Notification(Base):
     # Content
     title = Column(String(255), nullable=False)
     message = Column(Text, nullable=False)
+    action_url = Column(String(512), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)  # optional admin id
 

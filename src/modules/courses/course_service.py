@@ -265,6 +265,7 @@ async def update_course_with_content(course_id: str, course_data: dict, db: Asyn
                     title="Course Content Updated",
                     message="Some content in this course has been updated. Your progress has been preserved, but you may want to review the updated sections.",
                     db=db,
+                    action_url=f"/courses/{course_id}",
                     commit=False,
                 )
 
@@ -384,6 +385,7 @@ async def check_and_mark_course_completion(user: User, course_id: str, db: Async
                 title="Course Completed",
                 message="You have completed the course successfully!",
                 db=db,
+                action_url=f"/courses/{course_id}",
                 notif_type=NotificationType.SUCCESS,
             )
         

@@ -14,6 +14,7 @@ class NotificationResponse(BaseModel):
     course_id: Optional[UUID] = None
     track_id: Optional[UUID] = None
     user_id: Optional[UUID] = None
+    action_url: Optional[str] = None
     # computed flag for frontend
     is_unread: bool
 
