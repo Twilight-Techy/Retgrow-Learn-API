@@ -3,29 +3,23 @@
 from datetime import datetime
 from typing import Optional, List
 from uuid import UUID
-from pydantic import BaseModel
+from pydantic import ConfigDict, BaseModel
 
 class SkillResponse(BaseModel):
     id: UUID
     name: str
     description: Optional[str] = None
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class UserSkillResponse(BaseModel):
     skill: SkillResponse
     proficiency: float          # 0..100
     last_updated: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class LearningPathEnrollRequest(BaseModel):
     track_id: str  # The track the user wants to enroll in
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class LearningPathResponse(BaseModel):
     id: UUID
@@ -36,6 +30,4 @@ class LearningPathResponse(BaseModel):
     completed_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

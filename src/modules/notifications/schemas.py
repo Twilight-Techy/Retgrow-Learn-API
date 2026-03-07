@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Optional
 from uuid import UUID
-from pydantic import BaseModel
+from pydantic import ConfigDict, BaseModel
 
 class NotificationResponse(BaseModel):
     id: UUID
@@ -17,9 +17,7 @@ class NotificationResponse(BaseModel):
     action_url: Optional[str] = None
     # computed flag for frontend
     is_unread: bool
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class NotificationUpdateResponse(BaseModel):
     message: str

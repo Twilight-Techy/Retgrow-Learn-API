@@ -2,7 +2,7 @@
 
 from typing import Optional
 from uuid import UUID
-from pydantic import BaseModel
+from pydantic import ConfigDict, BaseModel
 
 class LeaderboardEntry(BaseModel):
     id: UUID
@@ -11,6 +11,4 @@ class LeaderboardEntry(BaseModel):
     last_name: Optional[str] = None
     avatar_url: Optional[str] = None
     xp: int
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

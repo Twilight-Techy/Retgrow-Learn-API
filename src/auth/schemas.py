@@ -2,7 +2,7 @@
 
 from typing import Annotated, Optional
 from uuid import UUID
-from pydantic import BaseModel, EmailStr, Field, model_validator
+from pydantic import ConfigDict, BaseModel, EmailStr, Field, model_validator
 from fastapi import HTTPException
 
 from src.models.models import UserRole
@@ -62,20 +62,15 @@ class ResetPasswordRequest(BaseModel):
     confirm_new_password: Annotated[str, Field(min_length=8)]  # Enforce a minimum length
 
     @model_validator(mode="after")
-    def check_passwords_match(cls, values):
-        new = values.new_password
-        confirm = values.confirm_new_password
+    def check_passwords_match(self):
+        new = self.new_password
+        confirm = self.confirm_new_password
         if new != confirm:
             raise HTTPException(
                 status_code=400,
                 detail="New password and confirmation do not match."
             )
-        if new == values.current_password:
-            raise HTTPException(
-                status_code=400,
-                detail="New password cannot be the same as the current password."
-            )
-        return values
+        return self
 class ResetPasswordResponse(BaseModel):
     message: str
 
@@ -85,23 +80,21 @@ class ChangePasswordRequest(BaseModel):
     confirm_new_password: str = Field(..., min_length=8)
 
     @model_validator(mode="after")
-    def check_passwords_match(cls, values):
-        new = values.new_password
-        confirm = values.confirm_new_password
+    def check_passwords_match(self):
+        new = self.new_password
+        confirm = self.confirm_new_password
         if new != confirm:
             raise HTTPException(
                 status_code=400,
                 detail="New password and confirmation do not match."
             )
-        if new == values.current_password:
+        if new == self.current_password:
             raise HTTPException(
                 status_code=400,
                 detail="New password cannot be the same as the current password."
             )
-        return values
-
-    class Config:
-        from_attributes = True
+        return self
+    model_config = ConfigDict(from_attributes=True)
 
 class ChangePasswordResponse(BaseModel):
     message: str
@@ -115,6 +108,4 @@ class AuthMeResponse(BaseModel):
     role: str
     is_active: bool = True
     current_plan: Optional[str] = "free"
-    
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

@@ -2,16 +2,14 @@
 
 from typing import List, Optional
 from uuid import UUID
-from pydantic import BaseModel
+from pydantic import ConfigDict, BaseModel
 
 class SearchResultItem(BaseModel):
     id: UUID
     type: str  # e.g. "course", "track", "resource"
     title: str
     description: Optional[str] = None
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class SearchResponse(BaseModel):
     courses: List[SearchResultItem]

@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import List, Optional, Any
 from uuid import UUID
-from pydantic import BaseModel
+from pydantic import ConfigDict, BaseModel
 
 from src.models.models import CourseLevel
 
@@ -17,9 +17,7 @@ class CourseResponse(BaseModel):
     price: float
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class CourseCreateRequest(BaseModel):
     title: str
@@ -28,9 +26,7 @@ class CourseCreateRequest(BaseModel):
     level: CourseLevel
     duration: Optional[str] = None
     price: float
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class CourseUpdateRequest(BaseModel):
     title: Optional[str] = None
@@ -39,18 +35,14 @@ class CourseUpdateRequest(BaseModel):
     level: Optional[CourseLevel] = None
     duration: Optional[str] = None
     price: Optional[float] = None
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class LessonCreateSchema(BaseModel):
     title: str
     content: Optional[str] = None
     video_url: Optional[str] = None
     order: int
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class LessonUpdateSchema(BaseModel):
     id: UUID  # Required to identify which lesson to update
@@ -58,18 +50,14 @@ class LessonUpdateSchema(BaseModel):
     content: Optional[str] = None
     video_url: Optional[str] = None
     order: Optional[int] = None
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ModuleCreateSchema(BaseModel):
     title: str
     order: int
     is_free: bool = False
     lessons: List[LessonCreateSchema] = []
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ModuleUpdateSchema(BaseModel):
     id: UUID  # Required to identify which module to update
@@ -77,9 +65,7 @@ class ModuleUpdateSchema(BaseModel):
     order: Optional[int] = None
     is_free: Optional[bool] = None
     lessons: Optional[List[LessonUpdateSchema]] = None
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class CourseCreateWithContentRequest(CourseCreateRequest):
     """
@@ -105,9 +91,7 @@ class LessonResponse(BaseModel):
     order: int
     is_locked: bool = False
     completed: bool = False
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ModuleResponse(BaseModel):
     id: UUID
@@ -115,9 +99,7 @@ class ModuleResponse(BaseModel):
     order: int
     is_free: bool
     lessons: List[LessonResponse] = []
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class CourseDetailResponse(BaseModel):
     id: UUID
@@ -130,9 +112,7 @@ class CourseDetailResponse(BaseModel):
     modules: List[ModuleResponse] = []
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class EnrollmentResponse(BaseModel):
     message: str

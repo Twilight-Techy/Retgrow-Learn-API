@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Optional
 from uuid import UUID
-from pydantic import BaseModel, model_validator
+from pydantic import ConfigDict, BaseModel, model_validator
 
 class ResourceResponse(BaseModel):
     id: UUID
@@ -17,9 +17,7 @@ class ResourceResponse(BaseModel):
     track_slug: Optional[str] = None
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
     @model_validator(mode='before')
     @classmethod
@@ -43,9 +41,7 @@ class ResourceResponse(BaseModel):
 
 class ResourceViewResponse(BaseModel):
     message: str
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ResourceCreateRequest(BaseModel):
     title: str
@@ -53,9 +49,7 @@ class ResourceCreateRequest(BaseModel):
     type: str
     url: str
     track_id: Optional[UUID] = None
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ResourceUpdateRequest(BaseModel):
     title: Optional[str] = None
@@ -63,6 +57,4 @@ class ResourceUpdateRequest(BaseModel):
     type: Optional[str] = None
     url: Optional[str] = None
     track_id: Optional[UUID] = None
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

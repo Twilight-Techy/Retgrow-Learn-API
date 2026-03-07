@@ -5,7 +5,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 from uuid import UUID
-from pydantic import BaseModel, Field
+from pydantic import ConfigDict, BaseModel, Field
 
 from src.models.models import (
     SubscriptionPlan,
@@ -24,25 +24,19 @@ class InitializePaymentRequest(BaseModel):
     billing_cycle: BillingCycle
     provider: PaymentProvider
     callback_url: Optional[str] = None  # Override default callback URL
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class VerifyPaymentRequest(BaseModel):
     """Request to verify a payment."""
     reference: str
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CancelSubscriptionRequest(BaseModel):
     """Request to cancel subscription."""
     reason: Optional[str] = None
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ==================== RESPONSE SCHEMAS ====================
@@ -54,9 +48,7 @@ class InitializePaymentResponse(BaseModel):
     provider: PaymentProvider
     amount: Decimal
     currency: str = "NGN"
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PaymentVerificationResponse(BaseModel):
@@ -68,9 +60,7 @@ class PaymentVerificationResponse(BaseModel):
     plan: SubscriptionPlan
     billing_cycle: BillingCycle
     message: str
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SubscriptionResponse(BaseModel):
@@ -83,9 +73,7 @@ class SubscriptionResponse(BaseModel):
     end_date: Optional[datetime] = None
     auto_renew: bool
     payment_provider: Optional[PaymentProvider] = None
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PaymentTransactionResponse(BaseModel):
@@ -100,9 +88,7 @@ class PaymentTransactionResponse(BaseModel):
     provider: PaymentProvider
     created_at: datetime
     completed_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ==================== PRICING CONFIG ====================
@@ -113,9 +99,7 @@ class PlanPricing(BaseModel):
     monthly_price: Decimal  # In Naira
     yearly_price: Decimal   # In Naira
     currency: str = "NGN"
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Pricing configuration (can be moved to config/settings later)

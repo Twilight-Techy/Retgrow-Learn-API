@@ -2,7 +2,7 @@
 
 from typing import List, Optional
 from uuid import UUID
-from pydantic import BaseModel, EmailStr
+from pydantic import ConfigDict, BaseModel, EmailStr
 from datetime import datetime
 
 class ProfileResponse(BaseModel):
@@ -18,9 +18,7 @@ class ProfileResponse(BaseModel):
     subscription_status: Optional[str] = None
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class UpdateProfileRequest(BaseModel):
     username: Optional[str] = None
@@ -33,9 +31,7 @@ class CourseProgress(BaseModel):
     course_id: UUID
     progress: float
     title: str
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class UserProgressResponse(BaseModel):
     overall_progress: float

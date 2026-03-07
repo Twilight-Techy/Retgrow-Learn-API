@@ -1,17 +1,13 @@
 # src/contact/schemas.py
 
-from pydantic import BaseModel, EmailStr
+from pydantic import ConfigDict, BaseModel, EmailStr
 
 class ContactFormRequest(BaseModel):
     name: str
     email: EmailStr
     message: str
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ContactFormResponse(BaseModel):
     message: str
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

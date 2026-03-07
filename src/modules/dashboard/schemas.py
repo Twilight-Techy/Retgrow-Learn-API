@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from typing import List, Optional
 from uuid import UUID
-from pydantic import BaseModel, model_validator
+from pydantic import ConfigDict, BaseModel, model_validator
 
 from src.models.models import CourseLevel
 
@@ -13,9 +13,7 @@ class EnrolledCourseResponse(BaseModel):
     id: UUID
     title: str
     progress: float = 0.00
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class RecentResourceResponse(BaseModel):
     id: UUID
@@ -24,9 +22,7 @@ class RecentResourceResponse(BaseModel):
     type: Optional[str] = None
     url: str
     track_title: Optional[str] = None
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
     @model_validator(mode='before')
     @classmethod
@@ -49,9 +45,7 @@ class DeadlineResponse(BaseModel):
     due_date: datetime
     course: Optional[str] = None
     is_overdue: bool = False
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
     @model_validator(mode='before')
     @classmethod
@@ -78,9 +72,7 @@ class RecentAchievementResponse(BaseModel):
     description: str | None = None
     icon_url: str | None = None
     earned_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
     @model_validator(mode='before')
     @classmethod
@@ -102,9 +94,7 @@ class RecentAchievementResponse(BaseModel):
 class ProgressOverviewItem(BaseModel):
     name: str
     value: int
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class CourseResponse(BaseModel):
     id: UUID
@@ -117,18 +107,14 @@ class CourseResponse(BaseModel):
     price: float
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class CourseBrief(BaseModel):
     id: UUID
     title: str
     description: Optional[str] = None
     image_url: Optional[str] = None
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class TrackBrief(BaseModel):
     id: UUID
@@ -136,9 +122,7 @@ class TrackBrief(BaseModel):
     title: str
     description: Optional[str] = None
     image_url: Optional[str] = None
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class LearningPathResponse(BaseModel):
     id: UUID
@@ -150,9 +134,7 @@ class LearningPathResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     completed_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CertificateBrief(BaseModel):
@@ -161,9 +143,7 @@ class CertificateBrief(BaseModel):
     course_title: str
     certificate_url: Optional[str] = None
     issued_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
     @model_validator(mode='before')
     @classmethod
@@ -189,6 +169,4 @@ class AggregatedDashboardResponse(BaseModel):
     recommended_courses: List[CourseResponse] = []
     learning_path: Optional[LearningPathResponse] = None
     certificates: List[CertificateBrief] = []
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
