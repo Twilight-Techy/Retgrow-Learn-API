@@ -2,14 +2,16 @@ import os
 from typing import List
 from dotenv import load_dotenv
 from pydantic import field_validator, model_validator
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Load environment variables from the correct .env file
-os.environ["APP_ENV"] = "development"  # Default to development
-env_file = ".env" if os.getenv("APP_ENV") == "development" else ".env.production"
+app_env = os.getenv("APP_ENV", "development")
+env_file = ".env" if app_env == "development" else ".env.production"
 load_dotenv(env_file)  # Load the .env file
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
     APP_ENV: str = "development"
     DEBUG: bool = True
     FRONTEND_URL: str
