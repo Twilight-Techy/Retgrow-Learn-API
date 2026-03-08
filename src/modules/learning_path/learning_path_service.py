@@ -5,7 +5,8 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models.models import LearningPath, UserSkill
+from fastapi import HTTPException, status
+from src.models.models import LearningPath, UserSkill, TrackCourse
 
 async def get_user_skills(user_id: str, db: AsyncSession) -> List[UserSkill]:
     """
@@ -31,6 +32,17 @@ async def enroll_in_track(user_id: str, track_id: str, db: AsyncSession):
       it is removed (unenrolled).
     - Then a new learning path record is created with the provided track_id.
     """
+    # Fetch the first course in the requested track to satisfy the NOT NULL constraint on current_course_id
+    stmt_course = select(TrackCourse.course_id).where(TrackCourse.track_id == track_id).order_by(TrackCourse.order.asc()).limit(1)
+    res_course = await db.execute(stmt_course)
+    first_course_id = res_course.scalars().first()
+    
+    if not first_course_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot enroll in this track as it currently has no courses."
+        )
+
     # Query if the user already has a learning path record.
     result = await db.execute(
         select(LearningPath).where(LearningPath.user_id == user_id)
@@ -53,7 +65,7 @@ async def enroll_in_track(user_id: str, track_id: str, db: AsyncSession):
         user_id=user_id,
         track_id=track_id,
         progress=0.0,
-        current_course_id=None,
+        current_course_id=first_course_id,
         completed_at=None
     )
     db.add(new_learning_path)
