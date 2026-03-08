@@ -8,29 +8,29 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import List
 import random
-from passlib.context import CryptContext
 
 from sqlalchemy import text, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # Import your models and database setup
+from src.seed.seed_course_images import get_image_for_course
+from src.seed.seed_lesson_content import get_content_for_lesson
 from src.models.models import (
     Base, User, UserRole, UserLogin, Track, Course, CourseLevel,
     TrackCourse, Module, Lesson, UserCourse, UserLesson,
     Quiz, QuizQuestion, UserQuiz, CourseQuiz,
     Resource, ResourceType, UserResource,
     Achievement, UserAchievement,
-    Notification, NotificationType,
+    Notification, NotificationType, UserNotification,
     Discussion, DiscussionReply,
     LearningPath, Skill, UserSkill, Deadline
 )
 from src.common.database.database import async_session, engine
 
-# Password hashing setup
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
+# For database seeding, we use a pre-calculated bcrypt hash for "password123"
+# to avoid compatibility issues with passlib and recent bcrypt versions.
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    return "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjIQqiRQYq"
 
 class DatabaseSeeder:
     def __init__(self):
@@ -292,7 +292,7 @@ class DatabaseSeeder:
                 id=uuid.uuid4(),
                 title=title,
                 description=desc,
-                image_url=f"https://images.unsplash.com/photo-{random.randint(1500000000000, 1600000000000)}",
+                image_url=get_image_for_course(title, desc),
                 level=level,
                 duration=duration,
                 price=price
@@ -354,15 +354,35 @@ class DatabaseSeeder:
         """Create modules and lessons for courses"""
         print("📖 Seeding modules and lessons...")
         
+        # Pre-defined descriptive module titles and lesson concepts
+        module_titles = [
+            "Introduction and Setup",
+            "Core Foundations",
+            "Advanced Techniques",
+            "Real-World Projects",
+            "Deployment and Best Practices"
+        ]
+
+        lesson_titles = [
+            "Understanding the Basics",
+            "Setting Up Your Environment",
+            "First Steps and Syntax",
+            "Working with Data",
+            "Control Flow and Logic",
+            "Functions and Reusability",
+            "Error Handling"
+        ]
+
         # Create 3-5 modules per course
         for course_id in self.course_ids[:8]:  # Focus on first 8 courses for detailed content
             num_modules = random.randint(3, 5)
             
             for mod_num in range(1, num_modules + 1):
+                mod_title = module_titles[mod_num - 1] if (mod_num - 1) < len(module_titles) else f"Module {mod_num}: Advanced Topics"
                 module = Module(
                     id=uuid.uuid4(),
                     course_id=course_id,
-                    title=f"Module {mod_num}: Core Concepts Part {mod_num}",
+                    title=mod_title,
                     order=mod_num
                 )
                 session.add(module)
@@ -371,11 +391,14 @@ class DatabaseSeeder:
                 # Create 3-6 lessons per module
                 num_lessons = random.randint(3, 6)
                 for lesson_num in range(1, num_lessons + 1):
+                    # Generate rich content using the helper script
+                    content_blocks = get_content_for_lesson(lesson_num, num_lessons)
+                    les_title = lesson_titles[lesson_num - 1] if (lesson_num - 1) < len(lesson_titles) else f"Topic {lesson_num}: Deep Dive"
                     lesson = Lesson(
                         id=uuid.uuid4(),
                         module_id=module.id,
-                        title=f"Lesson {mod_num}.{lesson_num}: Topic Overview",
-                        content=f"This is the detailed content for lesson {lesson_num} in module {mod_num}. It covers important concepts and includes examples, exercises, and best practices.",
+                        title=les_title,
+                        content=content_blocks,
                         video_url=f"https://example.com/videos/lesson_{mod_num}_{lesson_num}.mp4",
                         order=lesson_num
                     )
@@ -557,6 +580,7 @@ class DatabaseSeeder:
             ("Discussion Starter", "Create your first discussion topic", "💬"),
             ("Helper", "Reply to 10 discussions", "🤝"),
             ("Milestone", "Reach 1000 XP", "🎖️"),
+            ("Track Master", "Complete all courses in a learning track", "🛤️"),
         ]
         
         for title, desc, icon in achievements_data:
@@ -608,24 +632,34 @@ class DatabaseSeeder:
         print("🔔 Seeding notifications...")
         
         notifications_data = [
-            (NotificationType.SUCCESS, "Congratulations! You've completed the HTML & CSS course!", False),
-            (NotificationType.INFO, "New course available: Advanced React Patterns", False),
-            (NotificationType.WARNING, "Your quiz attempt expires in 2 days", True),
-            (NotificationType.SUCCESS, "Achievement unlocked: Quiz Master!", False),
-            (NotificationType.INFO, "Your instructor replied to your discussion", True),
-            (NotificationType.INFO, "Weekend challenge: Complete 3 lessons for bonus XP", True),
+            (NotificationType.SUCCESS, "Course Completed", "Congratulations! You've completed the HTML & CSS course!", False),
+            (NotificationType.INFO, "New Course Info", "New course available: Advanced React Patterns", False),
+            (NotificationType.WARNING, "Expiring Quiz", "Your quiz attempt expires in 2 days", True),
+            (NotificationType.SUCCESS, "Achievement", "Achievement unlocked: Quiz Master!", False),
+            (NotificationType.INFO, "Discussion Reply", "Your instructor replied to your discussion", True),
+            (NotificationType.INFO, "Weekend Challenge", "Weekend challenge: Complete 3 lessons for bonus XP", True),
         ]
         
-        for notif_type, message, is_read in notifications_data:
+        unread_ids = []
+        for notif_type, title, message, is_read in notifications_data:
+            notif_id = uuid.uuid4()
             notification = Notification(
-                id=uuid.uuid4(),
+                id=notif_id,
                 user_id=self.main_user_id,
                 type=notif_type,
+                title=title,
                 message=message,
-                read=is_read,
-                created_at=datetime.now() - timedelta(days=random.randint(0, 7))
+                created_at=datetime.now(timezone.utc) - timedelta(days=random.randint(0, 7))
             )
             session.add(notification)
+            if not is_read:
+                unread_ids.append(notif_id)
+                
+        user_notif = UserNotification(
+            user_id=self.main_user_id,
+            unread_notifications=unread_ids
+        )
+        session.add(user_notif)
         
         await session.commit()
         print("✅ Created notifications")
@@ -822,8 +856,10 @@ async def main():
     async with async_session() as session:
         try:
             await seeder.run_all(session)
-        except Exception as exc:
-            print("❌ Error during seeding:", exc)
+        except Exception as e:
+            print(f"❌ Error during seeding: {e}")
+            import traceback
+            traceback.print_exc()
             await session.rollback()
             raise
         finally:
