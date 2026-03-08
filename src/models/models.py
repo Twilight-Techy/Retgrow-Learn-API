@@ -75,8 +75,8 @@ class Track(Base):
     courses: Mapped[List["Course"]] = relationship(
         "Course",
         secondary="track_courses",
-        backref=backref("tracks", overlaps="course_associations,track_associations"),
-        overlaps="course_associations, track_associations"
+        backref=backref("tracks", overlaps="courses,tracks,course_associations,track_associations"),
+        overlaps="courses,tracks,course_associations,track_associations"
     )
 
     def __repr__(self):
@@ -120,8 +120,8 @@ class TrackCourse(Base):
     order = Column(Integer, nullable=False)
 
     # Define relationships to Track and Course models
-    track: Mapped[Track] = relationship("Track", backref=backref("course_associations", cascade="all, delete-orphan", overlaps="courses,track_associations"), overlaps="courses,track_associations")
-    course: Mapped[Course] = relationship("Course", backref=backref("track_associations", cascade="all, delete-orphan", overlaps="courses,course_associations"), overlaps="courses,course_associations")
+    track: Mapped[Track] = relationship("Track", backref=backref("course_associations", cascade="all, delete-orphan", overlaps="courses,tracks,course_associations,track_associations"), overlaps="courses,tracks,course_associations,track_associations")
+    course: Mapped[Course] = relationship("Course", backref=backref("track_associations", cascade="all, delete-orphan", overlaps="courses,tracks,course_associations,track_associations"), overlaps="courses,tracks,course_associations,track_associations")
     
     def __repr__(self):
         return f"<TrackCourse(track_id={self.track_id}, course_id={self.course_id}, order={self.order})>"
