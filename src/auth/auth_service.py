@@ -233,6 +233,7 @@ def get_google_flow() -> Flow:
         ]
     )
     flow.redirect_uri = settings.GOOGLE_REDIRECT_URI
+    flow.autogenerate_code_verifier = False
     return flow
 
 async def generate_google_auth_url() -> str:
