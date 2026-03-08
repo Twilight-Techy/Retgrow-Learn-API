@@ -11,6 +11,7 @@ class ProfileResponse(BaseModel):
     email: EmailStr
     first_name: str
     last_name: str
+    gender: str | None = None
     bio: str | None = None
     avatar_url: str | None = None
     role: str
@@ -24,6 +25,7 @@ class UpdateProfileRequest(BaseModel):
     username: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    gender: Optional[str] = None
     bio: Optional[str] = None
     avatar_url: Optional[str] = None
 

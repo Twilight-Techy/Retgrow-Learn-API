@@ -33,6 +33,7 @@ class User(Base):
     auth_provider = Column(SAEnum(AuthProvider), nullable=False, default=AuthProvider.EMAIL)
     first_name = Column(String(50), nullable=False)
     last_name = Column(String(50), nullable=False)
+    gender = Column(String(50), nullable=True)
     bio = Column(Text, nullable=True)
     avatar_url = Column(String(255), nullable=True)
     xp = Column(Integer, default=0)

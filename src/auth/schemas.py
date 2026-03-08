@@ -26,6 +26,7 @@ class SignupRequest(BaseModel):
     password_confirm: str
     first_name: str
     last_name: str
+    gender: Optional[str] = None
     role: Optional[UserRole] = UserRole.STUDENT
 
 class SignupResponse(BaseModel):

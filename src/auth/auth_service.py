@@ -93,6 +93,7 @@ async def create_user(user_data: dict, db: AsyncSession):
         password_hash=hash_password(user_data["password"]),
         first_name=user_data["first_name"],
         last_name=user_data["last_name"],
+        gender=user_data.get("gender"),
         verification_code=verification_code,
         role=user_data["role"]
     )
