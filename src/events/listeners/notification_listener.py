@@ -48,7 +48,7 @@ async def notify_track_enrolled(user_id: str, track_id: str, db: AsyncSession, *
             title=title,
             message=message,
             db=db,
-            action_url=f"/tracks/{track_id}",
+            action_url=f"/tracks/{track.slug}",
             notif_type=NotificationType.SUCCESS,
             commit=False
         )
@@ -154,12 +154,16 @@ async def notify_course_event(course_title: str, track_id: str, action: str, db:
         else:
             message = f"The course '{course_title}' has been removed from your track."
         if track_id:
+            stmt = select(Track).where(Track.id == track_id)
+            result = await db.execute(stmt)
+            track = result.scalars().first()
+            track_slug = track.slug if track else track_id
             await create_notification(
                 title=title,
                 message=message,
                 db=db,
                 track_id=track_id,
-                action_url=f"/tracks/{track_id}" if action != "deleted" else "/tracks",
+                action_url=f"/tracks/{track_slug}" if action != "deleted" else "/tracks",
                 notif_type=NotificationType.INFO,
                 commit=False
             )
@@ -211,12 +215,16 @@ async def notify_track_content_event(item_type: str, item_title: str, track_id: 
         else:
             message = f"The {item_type.lower()} '{item_title}' is no longer available."
         if track_id:
+            stmt = select(Track).where(Track.id == track_id)
+            result = await db.execute(stmt)
+            track = result.scalars().first()
+            track_slug = track.slug if track else track_id
             await create_notification(
                 title=title,
                 message=message,
                 db=db,
                 track_id=track_id,
-                action_url=f"/tracks/{track_id}" if action != "deleted" else "/tracks",
+                action_url=f"/tracks/{track_slug}" if action != "deleted" else "/tracks",
                 notif_type=NotificationType.INFO,
                 commit=False
             )
