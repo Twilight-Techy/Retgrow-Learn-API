@@ -195,6 +195,11 @@ async def authenticate_user(email: str, password: str, db: AsyncSession):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials provided!",
         )
+    if not user.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Please verify your email address to log in.",
+        )
     return user
 
 async def login_user(email: str, password: str, db: AsyncSession, background_tasks: BackgroundTasks):
