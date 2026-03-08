@@ -14,6 +14,7 @@ class Settings(BaseSettings):
 
     APP_ENV: str = "development"
     DEBUG: bool = True
+    API_URL: str = "http://localhost:8000"
     FRONTEND_URL: str
     SUPPORT_URL: str
     # DB_HOST: str
@@ -46,7 +47,7 @@ class Settings(BaseSettings):
     OPAY_PUBLIC_KEY: str = ""
     OPAY_SECRET_KEY: str = ""
     OPAY_MERCHANT_ID: str = ""
-    OPAY_ENVIRONMENT: str = "sandbox"
+    OPAY_ENVIRONMENT: str = ""
     STRIPE_SECRET_KEY: str = ""       # Optional — not yet configured
     STRIPE_WEBHOOK_SECRET: str = ""   # Optional — not yet configured
     CRON_SECRET: str = "secret"
@@ -54,7 +55,7 @@ class Settings(BaseSettings):
     # Google Auth Settings
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
-    GOOGLE_REDIRECT_URI: str = "http://localhost:8000/auth/google/callback"
+    GOOGLE_REDIRECT_URI: str = ""
 
     # Uncomment if you want to support comma-separated ALLOWED_ORIGINS strings
     @field_validator("ALLOWED_ORIGINS", mode="before")

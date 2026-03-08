@@ -3,6 +3,7 @@
 # import asyncio
 import logging
 
+import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,6 +21,7 @@ import src.events.listeners.auth_listener
 import src.events.listeners.achievement_listener
 import src.events.listeners.notification_listener
 # from src.common.utils.email import test_email
+from src.common.utils.keep_alive import keep_alive_task
 
 # Centralized logging configuration
 logging.basicConfig(
@@ -32,9 +34,16 @@ logging.basicConfig(
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await connect_to_db()
+    
+    # Start the background keep-alive task
+    keep_alive_job = asyncio.create_task(keep_alive_task())
+    
     # Schedule test_email to run in the background within the existing event loop
     # asyncio.create_task(test_email())
     yield
+    
+    # Cancel the keep-alive task on shutdown
+    keep_alive_job.cancel()
     await close_db_connection()
 
 # Initialize FastAPI app with lifespan manager
