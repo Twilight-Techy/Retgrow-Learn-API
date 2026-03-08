@@ -165,7 +165,14 @@ async def get_course_content(
     db: AsyncSession = Depends(get_db_session),
     current_user: User = Depends(get_current_user)
 ):
-    course = await course_service.get_course_content(course_id, db, current_user)
+    enrollment = await course_service.get_enrollment_status(str(course_id), current_user, db)
+    if not enrollment and current_user.role != "admin" and current_user.role != "instructor":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You must be enrolled in this course to view its content."
+        )
+
+    course = await course_service.get_course_content(str(course_id), db, current_user)
     if not course:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
