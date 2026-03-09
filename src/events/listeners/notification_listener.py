@@ -105,9 +105,38 @@ async def notify_subscription_created(user_id: str, plan: str, db: AsyncSession,
     except Exception as e:
         logger.error(f"Error creating subscription_created notification: {e}")
 
+async def notify_course_enrolled(user_id: str, course_id: str, db: AsyncSession, **kwargs):
+    """
+    Listens for 'course_enrolled'.
+    """
+    try:
+        from src.models.models import Course
+        stmt = select(Course).where(Course.id == course_id)
+        result = await db.execute(stmt)
+        course = result.scalars().first()
+        if not course:
+            return
+            
+        title = "Course Enrollment"
+        message = f"You've successfully enrolled in '{course.title}'! Get ready to unlock new skills and knowledge."
+        
+        await create_notification(
+            user_id=user_id,
+            title=title,
+            message=message,
+            db=db,
+            action_url=f"/courses/{course_id}",
+            notif_type=NotificationType.SUCCESS,
+            commit=False
+        )
+        logger.info(f"Notification queued for course enrollment: {course.title}")
+    except Exception as e:
+        logger.error(f"Error creating course_enrolled notification: {e}")
+
 # Subscription rules
 dispatcher.subscribe("achievement_unlocked", notify_achievement_unlocked)
 dispatcher.subscribe("track_enrolled", notify_track_enrolled)
+dispatcher.subscribe("course_enrolled", notify_course_enrolled)
 dispatcher.subscribe("quiz_submitted", notify_quiz_submitted)
 dispatcher.subscribe("subscription_created", notify_subscription_created)
 
